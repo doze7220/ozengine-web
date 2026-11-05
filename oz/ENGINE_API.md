@@ -4,16 +4,17 @@
 
 ## 1. 概要と使えるもの
 
-利用側が使えるのは次の4つだけである。
+利用側が使えるのは次の5つだけである。
 
 ```js
-import { Engine, Scene, Assets, Sound } from 'oz';
+import { Engine, Scene, Assets, Sound, Storage } from 'oz';
 ```
 
 * `Engine` : 起動、シーンの操作、`timeScale` の読み書き、ボタンの登録、キーの状態の取得
 * `Scene` : シーンの基底クラス
 * `Assets` : 画像と音声のロードと取得
 * `Sound` : 音の再生と音量
+* `Storage` : 設定の保存
 
 ブラウザの Canvas 2D と ES Modules で動く。ビルドは不要だが、実行には静的サーバが必要である（`file://` では ES Modules が動かない）。
 
@@ -210,6 +211,7 @@ Engine.timeScale = 0.5; // 半分の速さ
 * `Assets.image` のエラー（ロードされていない名前。20章）をフレーム処理の中で起こすと、シーンのメソッドの例外と同じくループが止まる。
 * `Assets.load` は、ファイルの読み込みに失敗しても警告を出して続行する（20章）。
 * `Sound.playSe`・`Sound.playBgm` のエラー（一覧にない名前など。21章）をフレーム処理の中で起こすと、シーンのメソッドの例外と同じくループが止まる。
+* `Storage` のエラー（`open` の前の `get`・`set`、`defaults` にない名前、JSON にできない値など。22章）をフレーム処理の中で起こすと、シーンのメソッドの例外と同じくループが止まる。
 
 ## 16. ポインタ入力
 
@@ -464,4 +466,64 @@ class TitleScene extends Scene {
 }
 
 Sound.bgmVolume = 0.5; // ロードの前から設定できる
+```
+
+## 22. セーブ
+
+`Storage` で設定などの小さなデータを保存する。保存先はブラウザの `localStorage` である。`Storage` は `Engine.start` の前から使える（`Engine` の各操作と違い、前に呼んでもエラーにならない。`Storage.open` の前の `get`・`set` がエラーになるのとは別の話である）。
+
+| 操作 | 内容 |
+| --- | --- |
+| `Storage.open({ key, version, defaults })` | セーブを開く。保存データを読み、`defaults` の名前だけを持つ状態にする |
+| `Storage.get(名前)` | 値を取り出す |
+| `Storage.set(名前, 値)` | 値を設定し、その場で保存する |
+
+### `Storage.open`
+
+* `key` : `localStorage` のキー。空でない文字列。
+* `version` : 版番号。有限の数値。
+* `defaults` : 名前から既定値へのオブジェクト。値は JSON にできるもの。空のオブジェクトも許す。`open` の時点でコピーを取るので、あとで元のオブジェクトを変更しても影響しない。
+* 引数が不正なときと、2回目の呼び出しは `Error`（先頭に `[oz] Storage.open:`）になる。エラーのときは開いていない状態のまま残るので、直して呼び直せる。
+* `open` は `localStorage` へ書き込まない。
+
+### `Storage.get`・`Storage.set`
+
+* `open` の前、`defaults` にない名前（`constructor` や `__proto__` を含む）は `Error` になる。
+* `set` に渡せる値は JSON にできるものだけである。`null`、真偽値、文字列、有限の数値、配列、プレーンなオブジェクト（とその入れ子）が使える。`undefined`・関数・シンボル・BigInt・`NaN`・`Infinity`・`Date`・`Map`・循環参照（内側に含まれる場合も）は `Error` になり、値も保存も変わらない。
+* `get` が返すのは値のコピーである。結果を書き換えても保存済みの値には影響しない。`set` に渡したオブジェクトを後から書き換えても影響しない。
+* 保存は `set` のその場で行う。1つのキーに `{ version, data }` の単一の JSON として、全体が入る。
+
+### 既定値で始める場合
+
+次のとき、全部の名前が `defaults` の値で始まる。エラーにはならない。
+
+* 保存データがない
+* 保存データの版番号が `version` と違う
+* 保存データが JSON として読めない
+* 保存データの形が違う
+
+移行処理はない。古いデータは最初の `set` まで消えず、`set` で新しい形に置き換わる。
+
+版番号が同じなら保存値を使う。`defaults` に増えた名前は既定値になり、`defaults` にない保存値は捨てられる（次の `set` で保存からも消える）。
+
+### `localStorage` が使えないとき
+
+`localStorage` が使えない、または容量があふれたときは、例外を投げず、コンソールに警告（`[oz] Storage.open:` または `[oz] Storage.set:` で始まる）を出して、メモリの上で続ける。`get`・`set` は動くが、ページを閉じると失われる。保存に失敗した `set` のたびに警告が出て、次の `set` で再び保存を試す。
+
+### 使い方の例
+
+```js
+import { Engine, Scene, Storage } from 'oz';
+
+Storage.open({
+  key: 'mygame',
+  version: 1,
+  defaults: { bgmVolume: 1, highScore: 0 },
+});
+
+class SettingsScene extends Scene {
+  onKeyDown(code) {
+    if (code === 'ArrowUp') Storage.set('bgmVolume', Math.min(1, Storage.get('bgmVolume') + 0.1));
+  }
+}
 ```
