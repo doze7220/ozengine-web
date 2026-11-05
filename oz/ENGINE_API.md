@@ -4,14 +4,15 @@
 
 ## 1. 概要と使えるもの
 
-利用側が使えるのは次の3つだけである。
+利用側が使えるのは次の4つだけである。
 
 ```js
-import { Engine, Scene, Sound } from 'oz';
+import { Engine, Scene, Assets, Sound } from 'oz';
 ```
 
 * `Engine` : 起動、シーンの操作、`timeScale` の読み書き、ボタンの登録、キーの状態の取得
 * `Scene` : シーンの基底クラス
+* `Assets` : 画像と音声のロードと取得
 * `Sound` : 音の再生と音量
 
 ブラウザの Canvas 2D と ES Modules で動く。ビルドは不要だが、実行には静的サーバが必要である（`file://` では ES Modules が動かない）。
@@ -129,7 +130,7 @@ class MoveScene extends Scene {
 
 ## 7. 操作を呼んでよい場所
 
-* 呼んでよい: `update`・`onPointer`・`onKeyDown`・`onPress`（18章）の中と、フレーム処理の外（タイマー、Promise の完了時など）。
+* 呼んでよい: `update`・`onPointer`・`onKeyDown`・`onPress`（18章）の中と、フレーム処理の外（タイマー、`Assets.load` の完了など Promise の完了時）。
 * 呼ばない: `draw`・`init`・`destroy` の中。実行時の検出はしないので、呼んだ場合の動作は保証されない。
 
 ## 8. 操作の直後の時間
@@ -206,6 +207,8 @@ Engine.timeScale = 0.5; // 半分の速さ
   * `destroy` が失敗したシーンは、`popScene`・`changeScene` のどちらでもスタックから外れている。
   * `changeScene` の途中で `destroy` が失敗すると、新しいシーンは積まれず、スタックは途中まで外れた状態で残る。
 * `Engine.start` の中で最初のシーンの `init` が失敗した場合は、例外が `start` から投げられ、ループは始まらない。
+* `Assets.image` のエラー（ロードされていない名前。20章）をフレーム処理の中で起こすと、シーンのメソッドの例外と同じくループが止まる。
+* `Assets.load` は、ファイルの読み込みに失敗しても警告を出して続行する（20章）。
 * `Sound.playSe`・`Sound.playBgm` のエラー（一覧にない名前など。21章）をフレーム処理の中で起こすと、シーンのメソッドの例外と同じくループが止まる。
 
 ## 16. ポインタ入力
@@ -310,6 +313,82 @@ class MenuScene extends Scene {
 * `onPointer`・`onKeyDown`・`onPress` は、`draw` の中やブラウザのイベントの中からは呼ばれない。
 * 1フレームの順序: 時間を進める → 届いた順に入力を配る → `update` を0回以上 → `draw`。
 * ポインタはボタン → 最前面のシーンの順に、キーは最前面のシーンに届く。
+
+## 20. アセット
+
+`Assets` で画像と音声をロードし、画像を名前で取り出す。`Assets` は `Engine.start` の前から使える（`Engine` の各操作と違い、前に呼んでもエラーにならない）。
+
+| API | 内容 |
+| --- | --- |
+| `Assets.load({ images, sounds })` | 一覧の画像と音声をロードする。すべて終わると解決する Promise を返す（値は `undefined`） |
+| `Assets.image(名前)` | ロード済みの画像を返す。`ctx.drawImage` に渡せる |
+
+### `Assets.load`
+
+* `images`・`sounds` は、名前からパスへのオブジェクトである。どちらも省略できる（`{}` でもよい）。
+* 何度呼んでもよい。同じ名前を再びロードすると、後に始めたロードの結果に置き換わる（先に終わった順ではない）。
+  * ロード済みの名前の再ロード中は、完了するまで前のものを使う。
+  * まだ完了していない名前の再ロード中は、未ロードとして扱う（`Assets.image` や `Sound` はエラー）。先に始めたロードが先に終わっても同じである。
+  * 再ロードが完了すると、新しいものを使う。再ロードが失敗すると、失敗の扱い（下記）に置き換わる。
+  * 流れている BGM の名前を再ロードしても、流れている音はそのまま続く。
+* `images` と `sounds` の名前は別々に管理する。同じ名前を両方に使ってよい。音声の名前は `Sound` で使う（21章）。
+* パスはページ（`index.html`）からの相対パスで書く。import map の `assets/` は `import` にしか効かないので、ここでは使えない。
+* スプライトJSは対象外である。`import` で読み込む。
+* 進捗の通知はない。ロード中の表示はシーンで行う。
+
+### 引数が不正なとき
+
+次の場合は何も始めず、`Error`（先頭に `[oz] Assets.load:`）で reject する。同期的な例外にはならない。
+
+* 引数がオブジェクトでない（`undefined`・`null`・配列・数値など）
+* `images`・`sounds` 以外の項目がある（`image:` のような書き間違いを見つけるため）
+* `images`・`sounds` が、省略でもオブジェクトでもない（`null`・配列を含む）
+* 名前が空文字列、またはパスが空でない文字列でない
+
+### 読み込みの失敗
+
+* ファイルが読めない、画像として不正、音声をデコードできない、AudioContext が使えない、などの場合でも、Promise は失敗せず、読めた分で続行する。
+* 失敗したファイルごとに、`[oz] Assets.load:` で始まる警告をコンソールに出す（名前とパスを含む）。
+* 失敗した画像は、`Assets.image` が透明な1×1の画像（`width`・`height` は `1`）を返す。ページには追加されない。
+* 失敗した音は、`Sound.playSe`・`Sound.playBgm` がエラーにならず何もしない（21章）。
+
+### 取得
+
+`Assets.image(名前)` は、一覧にない名前や、ロードの終わっていない名前でエラーになる。
+
+### ロードの流れの例
+
+ロード用のシーンの `init` で `Assets.load` を呼び、完了したら `Engine.changeScene` で本編へ切り替える。ロード中の表示は `draw` で行う。
+
+```js
+import { Engine, Scene, Assets } from 'oz';
+
+class LoadScene extends Scene {
+  init() {
+    Assets.load({
+      images: { player: './assets/images/player.png' },
+      sounds: { jump: './assets/sounds/jump.mp3' },
+    }).then(() => Engine.changeScene(new GameScene()));
+  }
+
+  draw(ctx, layer) {
+    if (layer !== 'main') return;
+    ctx.save();
+    ctx.fillStyle = '#fff';
+    ctx.font = '32px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('ロード中', 640, 360);
+    ctx.restore();
+  }
+}
+
+class GameScene extends Scene {
+  draw(ctx, layer) {
+    if (layer !== 'main') return;
+    ctx.drawImage(Assets.image('player'), 0, 0);
+  }
+}
+```
 
 ## 21. サウンド
 
