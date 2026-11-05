@@ -1,5 +1,5 @@
 /**
- * @fileoverview 責務: シーンスタックの管理（切り替え、積む、戻す）と、操作があったことの通知。
+ * @fileoverview 責務: シーンスタックの管理（切り替え、積む、戻す）、最前面のシーンの参照、操作があったことの通知。
  * 遷移演出や時間管理には関与しない。
  */
 
@@ -11,6 +11,14 @@ export class Scenes {
   #stack = [];
   /** @type {boolean} シーン操作があったか */
   #changed = false;
+
+  /**
+   * 最前面のシーン。空なら null。
+   * @returns {import('./Scene.js').Scene | null}
+   */
+  get top() {
+    return this.#stack.length > 0 ? this.#stack[this.#stack.length - 1] : null;
+  }
 
   /**
    * シーンをスタックに積み、init を呼ぶ。init の前に積み、変更フラグを立てる。

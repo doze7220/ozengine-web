@@ -1,10 +1,10 @@
 /**
- * @fileoverview 責務: Canvas の論理解像度の設定と、縦横比を保った表示サイズの調整を担う。
- * 描画と入力の配信は行わない（座標変換は現時点では未実装）。
+ * @fileoverview 責務: Canvas の論理解像度の設定、縦横比を保った表示サイズの調整、画面座標から論理座標への変換を担う。
+ * 描画と入力の配信は行わない。
  */
 
 /**
- * 論理解像度を設定し、表示サイズをウィンドウに合わせる。
+ * 論理解像度を設定し、表示サイズをウィンドウに合わせ、画面座標を論理座標へ変換する。
  */
 export class Screen {
   /**
@@ -26,6 +26,20 @@ export class Screen {
 
     this._fit();
     window.addEventListener('resize', () => this._fit());
+  }
+
+  /**
+   * Pointer Events の clientX / clientY を論理座標へ変換する。呼ぶたびに矩形を取り、範囲外の値は丸めない。
+   * @param {number} clientX ビューポート基準の X 座標。
+   * @param {number} clientY ビューポート基準の Y 座標。
+   * @returns {{x: number, y: number}} 論理座標。
+   */
+  toLogical(clientX, clientY) {
+    const rect = this._canvas.getBoundingClientRect();
+    return {
+      x: ((clientX - rect.left) * this._width) / rect.width,
+      y: ((clientY - rect.top) * this._height) / rect.height,
+    };
   }
 
   /**
