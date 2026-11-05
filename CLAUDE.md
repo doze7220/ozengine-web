@@ -1,6 +1,6 @@
-# (プロジェクト名)
+# OZ Engine
 
-(1〜2文のプロジェクト概要。実行環境・技術スタックを含める。立ち上げ時に `_doc/INITIAL_PROJECT_STARTUP.md` の手順で書き換える。)コードを変更する者は必ず `./PROJECT_CONSTITUTION.md` に従うこと。
+HTML+JS 製ゲームの基礎機能を提供する、一人開発向けのエンジンとその最小サンプル。ブラウザの Canvas 2D と Vanilla JS（ES Modules、ビルドなし）で動く。コードを変更する者は必ず `./PROJECT_CONSTITUTION.md` に従うこと。
 
 開発は DIR/REQ/RES 駆動で行う（DIR: `_log/dir/`、REQ: `_log/req/`、RES: `_log/res/`）。
 
