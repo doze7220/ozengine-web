@@ -12,21 +12,21 @@ AIは新規にファイルを作成、あるいはログを記録する際、必
 
 ```
 ozengine-web/
+├── index.html              # 起動ページ（import map を定義する）
 ├── oz/                     # エンジン本体（ゲームへ丸ごとコピーされる単位）
 │   ├── index.js
 │   ├── ENGINE_API.md
 │   ├── VERSION
 │   └── src/
-├── samples/
-│   └── vernier/            # 実際のゲームと同じ構成の最小サンプル
-│       ├── index.html
-│       ├── oz/             # 同期スクリプトが生成するコピー（手で編集しない）
-│       ├── js/
-│       └── assets/
-│           ├── sprites/
-│           ├── images/
-│           └── sounds/
-├── tools/                  # 開発用スクリプト（Node.js。外部パッケージなし）
+├── js/                     # アプリのコード（ゲームの土台）
+│   ├── main.js
+│   ├── scenes/
+│   ├── effect/
+│   └── entities/
+├── assets/                 # 素材
+│   ├── sprites/
+│   ├── images/
+│   └── sounds/
 ├── _doc/
 ├── _log/
 ├── CLAUDE.md
@@ -35,9 +35,9 @@ ozengine-web/
 └── README.md
 ```
 
-各ゲームの構成は `samples/vernier/` と同じとする。`oz/` はエンジン、`js/` はアプリのコード、`assets/` は素材である。
+新規プロジェクトは、`template-app` を元にして、本リポジトリの `index.html`・`oz/`・`js/`・`assets/` をコピーして作る。コピー後は `ozengine sample` を検索して目印の付いたコードを消し（書き方は憲法3章）、`assets/` の中身を入れ替える。コピー後のエンジン更新は `oz/` の置き換えだけで行う。
 
-エンジンと素材の import には、利用側の `index.html` で定義する import map を使う。
+エンジンと素材の import には、`index.html` で定義する import map を使う。
 
 ```html
 <script type="importmap">
@@ -124,7 +124,7 @@ Time・Screen・Sound・Storage は他のエンジンモジュールに依存し
 ---
 
 ### 4. 各モジュールの責務リファレンス
-モジュール名は `oz/src/` のファイルに対応する。公開するものは `oz/index.js` から再exportする。
+パスの書かれていないモジュール名は `oz/src/` のファイルに対応する。公開するものは `oz/index.js` から再exportする。
 
 | モジュール | 書いてよいこと | 書いたら責務違反になること |
 | --- | --- | --- |
@@ -142,6 +142,9 @@ Time・Screen・Sound・Storage は他のエンジンモジュールに依存し
 | **Sound** | AudioContext の管理、SEとBGMの再生、フェード、音量 | BGMの状態遷移（ピンチなどの判定はゲーム側） |
 | **Storage** | 単一JSONの保存と読み込み、版番号が違うときの既定値への初期化 | セーブ内容の定義 |
 | **DebugOverlay** | FPS表示 | ゲーム状態の参照 |
-| **tools/**（リポジトリ直下） | `oz/` を利用側へ同期するスクリプト | 実行時に使われるコード |
+| **js/main.js** | `Engine.start` の呼び出し、レイヤーの定義 | ゲームロジック、描画処理 |
+| **js/scenes/** | シーンごとの進行と、`effect/`・`entities/` の呼び出し | 細かい動きや描画の実装 |
+| **js/effect/** | 星、トレイルなどの演出の更新と描画 | ゲーム進行に影響する処理 |
+| **js/entities/** | 位置や状態の保持、動きの更新 | 描画命令の直書き（描画はスプライトや `effect/` に任せる） |
 
 **エンジンに入れないもの:** スプライトの描画処理、アニメーション、カメラ、当たり判定、物理、パーティクル、Entity基底クラス、遷移演出、タブやスクロールなどのUI部品。必要になったPhaseで、発注者の承認を得てから検討する（憲法3章「先回り実装の禁止」）。

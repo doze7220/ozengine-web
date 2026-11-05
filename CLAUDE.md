@@ -1,6 +1,6 @@
 # OZ Engine
 
-HTML+JS 製ゲームの基礎機能を提供する、一人開発向けのエンジンとその最小サンプル。ブラウザの Canvas 2D と Vanilla JS（ES Modules、ビルドなし）で動く。コードを変更する者は必ず `./PROJECT_CONSTITUTION.md` に従うこと。
+HTML+JS 製ゲームの基礎機能を提供する、一人開発向けのエンジン（`oz/`）と、その上で動くゲームの土台（`js/`、`assets/`）。ブラウザの Canvas 2D と Vanilla JS（ES Modules、ビルドなし）で動く。コードを変更する者は必ず `./PROJECT_CONSTITUTION.md` に従うこと。
 
 開発は DIR/REQ/RES 駆動で行う（DIR: `_log/dir/`、REQ: `_log/req/`、RES: `_log/res/`）。
 
