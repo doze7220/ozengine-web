@@ -65,12 +65,12 @@ ozengine-web/
 #### 2.2 起動設定（`Engine.start` に渡す）
 | 項目 | 内容 |
 | --- | --- |
-| `canvas` | 描画先の canvas 要素 |
-| `width` / `height` | 論理解像度 |
-| `layers` | レイヤー名の配列（奥から手前の順）。利用側が定義する |
-| `tickRate` | 固定ティック数（1秒あたり。既定は 60） |
-| `scene` | 最初のシーン |
-| `debug` | デバッグ表示の有無 |
+| `canvas` | 必須。描画先の canvas 要素 |
+| `width` / `height` | 必須。論理解像度 |
+| `layers` | 必須。レイヤー名の配列（奥から手前の順）。利用側が定義する |
+| `tickRate` | 任意。固定ティック数（1秒あたり。既定は 60） |
+| `scene` | 必須。最初のシーン |
+| `debug` | 任意。デバッグ表示の有無（既定は無効） |
 
 #### 2.3 シーン（`Scene` の派生クラス）
 | メソッド | 呼ばれるタイミング |
@@ -113,7 +113,7 @@ phaseout の3系統を引き継ぐ。単位はすべてミリ秒。
 * **「押した瞬間」の入力を取りこぼさない:** 入力は毎フレーム配るので、ティックが0回のフレームでも届く。押してから離すまでが1フレームより短いキーも、`onKeyDown` を呼び、そのフレームの間は `isKeyDown` を `true` にして、次のフレームで `false` にする。
 * **ブラウザのイベントの中ではシーンの処理を呼ばない:** `onPointer`・`onKeyDown`・`onPress` は手順2の中からだけ呼ぶ。
 * **音声の自動再生制限:** 入力の配信はフレームの中なので、そこからは自動再生制限を解除できない。`Sound` は自分で `window` に `pointerdown`・`pointerup`・`keydown` を capture で登録し、そのイベントの中で直接 `AudioContext.resume()` を呼ぶ（`Input` を経由しない）。イベントの中では `resume()` の呼び出しと入力の記録だけを行い、シーンの処理を呼ばない。`Escape` の `keydown` は入力に数えない。入力があり AudioContext が `running` になったら登録を解除する。最初の入力より前の再生の要求は捨てる。
-* **音の時刻:** フェードと停止の予定には `AudioContext.currentTime` を使う。憲法3章「時間の受け渡し」は、ゲームの更新に使う時間を対象とするものと解釈し、音の予定時刻にだけ使うことを認める（発注者の決定）。その値をゲームの更新や描画に使わず、公開もしない。音は `timeScale` と無関係に実時間で進む。
+* **音の時刻:** フェードと停止の予定には `AudioContext.currentTime` を使う。これは憲法3章「時間の受け渡し」に明記された例外である。音は `timeScale` と無関係に実時間で進む。
 
 `Engine` が各モジュールを生成する。`Time`・`Scenes`・`Layers`・`Input`・`DebugOverlay` のインスタンスを `GameLoop` へ、`Screen`・`Scenes`・`Buttons` のインスタンスを `Input` へ引数で渡すので、`GameLoop` と `Input` はこれらを import しない。`Scenes` と `Layers` も互いを import しない。
 
