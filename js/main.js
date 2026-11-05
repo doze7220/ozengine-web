@@ -1,6 +1,7 @@
 /**
  * 責務: Engine.start の呼び出しとレイヤーの定義を行う利用側のエントリポイント。
- * 確認用コード（目印の中）に限り、図形の更新、入力（ポインタ、キー、ボタン）の確認、描画処理を例外的に含む。
+ * 確認用コード（目印の中）に限り、図形の更新、入力（ポインタ、キー、ボタン）の確認、描画処理、
+ * アセット・サウンド・セーブの確認を例外的に含む。
  */
 import { Engine, Scene } from 'oz';
 
@@ -13,6 +14,38 @@ const config = {
 };
 
 /* ozengine sample: begin */
+import { Assets, Sound, Storage } from 'oz';
+
+/** 確認用にロードする画像と音声の一覧 */
+const SAMPLE_ASSETS = {
+  images: { sample: './assets/images/sample.png' },
+  sounds: { se: './assets/sounds/sample_se.mp3', bgm: './assets/sounds/sample_bgm.mp3' },
+};
+/** BGM のフェードの長さ（ミリ秒） */
+const BGM_FADE_MS = 1000;
+/** bgmVolume を順に切り替える値 */
+const BGM_VOLUME_STEPS = [1, 0.5, 0.1];
+/** seVolume を順に切り替える値 */
+const SE_VOLUME_STEPS = [1, 0.5, 0.1];
+/** masterVolume を順に切り替える値 */
+const MASTER_VOLUME_STEPS = [1, 0];
+/** 確認用の画像を描く高さ */
+const SAMPLE_IMAGE_HEIGHT = 200;
+/** 確認用の画像の右端からの余白 */
+const SAMPLE_IMAGE_MARGIN = 20;
+/**
+ * BGM を流す状態か。シーンを切り替えても残すので、モジュール内に置く。
+ * @type {boolean}
+ */
+let sampleBgmOn = true;
+
+/**
+ * セーブデータの版。URL に `?savever=2` があれば 2、なければ 1（版違いの動作の確認用）。
+ * @type {number}
+ */
+const saveVersion = new URLSearchParams(location.search).get('savever') === '2' ? 2 : 1;
+Storage.open({ key: 'ozengine-sample', version: saveVersion, defaults: { count: 0 } });
+
 /** 図形の一辺の長さ（ピクセル） */
 const SIZE = 200;
 /** 端から端まで動くのにかかる時間（ミリ秒） */
@@ -53,6 +86,35 @@ function createSampleShapes() {
 }
 
 /**
+ * BGM を流す状態のときだけ、BGM を流す（同じ曲なら何も起きない）。
+ * @returns {void}
+ */
+function startSampleBgm() {
+  if (sampleBgmOn) Sound.playBgm('bgm', { fadeMs: BGM_FADE_MS });
+}
+
+/**
+ * BGM を流す状態を反転し、流す／止めるを行う。
+ * @returns {void}
+ */
+function toggleSampleBgm() {
+  sampleBgmOn = !sampleBgmOn;
+  if (sampleBgmOn) Sound.playBgm('bgm', { fadeMs: BGM_FADE_MS });
+  else Sound.stopBgm({ fadeMs: BGM_FADE_MS });
+}
+
+/**
+ * steps の中で value の次の値を返す（末尾の次は先頭）。
+ * @param {number[]} steps 値の並び
+ * @param {number} value 現在の値
+ * @returns {number} 次の値
+ */
+function nextStep(steps, value) {
+  const i = steps.indexOf(value);
+  return steps[(i + 1) % steps.length];
+}
+
+/**
  * ボタンの矩形と文字を描く。
  * @param {CanvasRenderingContext2D} ctx 描画先のコンテキスト
  * @param {{x: number, y: number, width: number, height: number}} button ボタンの矩形
@@ -75,7 +137,8 @@ function drawSampleButton(ctx, button, label) {
 }
 
 /**
- * レイヤーごとに図形を動かして描き、入力（ポインタ、キー、ボタン）を確認するシーン。
+ * レイヤーごとに図形を動かして描き、画像を表示して、入力（ポインタ、キー、ボタン）と
+ * サウンドとセーブの操作を確認するシーン。
  * 手前から青、緑、赤の順に見えれば、レイヤーの定義どおりである。
  */
 class SampleScene extends Scene {
@@ -181,13 +244,14 @@ class SampleScene extends Scene {
   }
 
   /**
-   * ボタンの外のポインタ入力を記録する（状態の更新だけ）。
+   * ボタンの外のポインタ入力を記録する。押下では BGM の再生要求も行う。
    * @param {{type: string, x: number, y: number}} pointer ポインタ入力
    * @returns {void}
    */
   onPointer(pointer) {
     const pos = { x: pointer.x, y: pointer.y };
     if (pointer.type === 'down') {
+      startSampleBgm();
       this.outsideCount += 1;
       this.pressPos = pos;
       this.trail = [];
@@ -201,19 +265,27 @@ class SampleScene extends Scene {
   }
 
   /**
-   * キーを押した回数を増やし、1・2・3 でボタンと同じ操作を行う。
+   * キーを押した回数を増やし、BGM を流し（5 は切り替え）、1・2・3 でボタンと同じ操作を、
+   * 4〜9 でサウンドとセーブの操作を行う。
    * @param {string} code KeyboardEvent.code
    * @returns {void}
    */
   onKeyDown(code) {
     this.keyCount += 1;
+    if (code === 'Digit5') toggleSampleBgm();
+    else startSampleBgm();
     if (code === 'Digit1') this.cycleSpeed();
     else if (code === 'Digit2') this.switchScene();
     else if (code === 'Digit3') this.pushOverlay();
+    else if (code === 'Digit4') Sound.playSe('se');
+    else if (code === 'Digit6') Sound.bgmVolume = nextStep(BGM_VOLUME_STEPS, Sound.bgmVolume);
+    else if (code === 'Digit7') Sound.seVolume = nextStep(SE_VOLUME_STEPS, Sound.seVolume);
+    else if (code === 'Digit8') Sound.masterVolume = nextStep(MASTER_VOLUME_STEPS, Sound.masterVolume);
+    else if (code === 'Digit9') Storage.set('count', Storage.get('count') + 1);
   }
 
   /**
-   * 指定されたレイヤーの図形を描く。back は背景、front はボタン、説明、ポインタの印も描く。
+   * 指定されたレイヤーの図形を描く。back は背景と右上の画像、front はボタン、説明、ポインタの印も描く。
    * 状態は変更しない。
    * @param {CanvasRenderingContext2D} ctx 描画先のコンテキスト
    * @param {string} layer 描画中のレイヤー名
@@ -225,6 +297,15 @@ class SampleScene extends Scene {
       ctx.save();
       ctx.fillStyle = VARIANTS[this.variant].background;
       ctx.fillRect(0, 0, config.width, config.height);
+      const image = Assets.image('sample');
+      const imageWidth = (image.width / image.height) * SAMPLE_IMAGE_HEIGHT;
+      ctx.drawImage(
+        image,
+        config.width - imageWidth - SAMPLE_IMAGE_MARGIN,
+        0,
+        imageWidth,
+        SAMPLE_IMAGE_HEIGHT,
+      );
       ctx.restore();
     }
     const pressed = Engine.isKeyDown('Space');
@@ -239,7 +320,31 @@ class SampleScene extends Scene {
     const labels = [`速さ ×${time.timeScale} [1]`, '切替 [2]', '積む [3]'];
     this.buttons.forEach((b, i) => drawSampleButton(ctx, b, labels[i]));
     this.drawGuide(ctx);
+    this.drawSoundGuide(ctx);
     this.drawMarks(ctx);
+  }
+
+  /**
+   * サウンドとセーブの操作の説明と現在の値を描く。状態は変更しない。
+   * @param {CanvasRenderingContext2D} ctx 描画先のコンテキスト
+   * @returns {void}
+   */
+  drawSoundGuide(ctx) {
+    const lines = [
+      '[4] SE を鳴らす',
+      `[5] BGM: ${sampleBgmOn ? '流す' : '止める'}`,
+      `[6] bgmVolume: ${Sound.bgmVolume}`,
+      `[7] seVolume: ${Sound.seVolume}`,
+      `[8] masterVolume: ${Sound.masterVolume}`,
+      `[9] count: ${Storage.get('count')}`,
+    ];
+    ctx.save();
+    ctx.fillStyle = '#ffffff';
+    ctx.font = '20px sans-serif';
+    ctx.textAlign = 'left';
+    ctx.textBaseline = 'top';
+    lines.forEach((line, i) => ctx.fillText(line, 850, 10 + i * 30));
+    ctx.restore();
   }
 
   /**
@@ -365,8 +470,43 @@ class SampleOverlayScene extends Scene {
   }
 }
 
+/**
+ * 画像と音声をロードし、完了したら SampleScene へ切り替えるシーン。
+ */
+class SampleLoadScene extends Scene {
+  /**
+   * ロードを始め、完了したら BGM と SE を鳴らして SampleScene へ切り替える。
+   * @returns {void}
+   */
+  init() {
+    Assets.load(SAMPLE_ASSETS).then(() => {
+      Sound.playBgm('bgm', { fadeMs: BGM_FADE_MS });
+      Sound.playSe('se');
+      Engine.changeScene(new SampleScene(0, createSampleShapes()));
+    });
+  }
+
+  /**
+   * front レイヤーに「ロード中」を画面中央に描く。状態は変更しない。
+   * @param {CanvasRenderingContext2D} ctx 描画先のコンテキスト
+   * @param {string} layer 描画中のレイヤー名
+   * @param {{realDelta: number, gameTime: number, timeScale: number}} time 読み取り専用の時間情報
+   * @returns {void}
+   */
+  draw(ctx, layer, time) {
+    if (layer !== 'front') return;
+    ctx.save();
+    ctx.fillStyle = '#ffffff';
+    ctx.font = '32px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('ロード中', config.width / 2, config.height / 2);
+    ctx.restore();
+  }
+}
+
 config.layers = ['back', 'middle', 'front'];
-config.scene = new SampleScene(0, createSampleShapes());
+config.scene = new SampleLoadScene();
 config.debug = new URLSearchParams(location.search).has('debug');
 /* ozengine sample: end */
 
