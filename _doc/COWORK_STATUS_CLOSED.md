@@ -14,3 +14,7 @@
 * **Phase 01-01 から先送りした画面での確認（`timeScale` の変更、シーンの切り替え、シーンを積む・戻す）:** Phase 01-02 のテストプレイで確認済み（RES: `./_log/res/261105_2007_RES_Phase01-02_入力とボタン.md` タスク4）。
 * **`timeScale` が `0` の間の入力の扱い:** 発注者の決定により、入力は `timeScale` に関係なく毎フレーム、固定ティックの前に配る（同RES タスク2・タスク3、`PROJECT_ARCHITECTURE.md` 3章）。
 * **`Sound` の AudioContext の再開の方法:** 入力の配信はフレームの中なので、`Sound` が自分で `window` に `pointerdown`・`pointerup`・`keydown` を capture で登録し、そのイベントの中で直接 `resume()` を呼ぶ形にした（RES: `./_log/res/261105_2139_RES_Phase01-03_アセットとサウンドとセーブ.md` タスク1、`PROJECT_ARCHITECTURE.md` 3章）。
+* **`js/main.js` の責務定義の2行目が目印の外にあった件、確認用コードの `trail` のコメントと `SampleLoadScene.init` の JSDoc が実際の動作と違った件:** 確認用コードを見本に置き換えて解消した（RES: `./_log/res/261105_2241_RES_Phase01-04_ゲームの土台.md` タスク7）。
+* **最初の入力より前の音の要求は捨てられるので、BGM を最初の入力への反応の中で呼ぶ件:** タイトルのボタンの `onPress`、`onPointer` の `'down'`、`onKeyDown` のすべてで `playBgm` を呼ぶ形にした（同RES タスク6）。発注者のテストプレイで確認済み。
+* **噴射口とトレイルの起点のずれ:** 発注者の決定により元のまま `(-43, ±12)` とした（同RES タスク3）。
+* **`oz/src/` を読めなくする方法:** 発注者の決定により、Git に入らない `.claude/settings.local.json` の一時的な拒否設定とした。`js/` のタスクの後に外した（同RES タスク9の設計AIの記録）。
