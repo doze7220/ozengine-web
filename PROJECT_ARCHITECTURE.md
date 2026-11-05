@@ -90,13 +90,15 @@ phaseout の3系統を引き継ぐ。単位はすべてミリ秒。
 | `gameTime` | `timeScale` を適用した累積ゲーム時間 |
 | `timeScale` | ゲーム時間の倍率（`1` が等速）。スローや停止に使う |
 
+`draw` に渡す `time` は読み取り専用である。`timeScale` の変更は `Engine.timeScale` で行う。
+
 ---
 
 ### 3. 処理フロー（実行サイクル）
 
 1フレームの処理順序は次のとおりで、変更してはならない。
 
-1. `Time` が `realDelta` を計算し、`realDelta × timeScale` を蓄積する（1フレームの上限は5ティック分）。
+1. `Time` が `realDelta` を計算し、`realDelta × timeScale` を蓄積する（1フレームの上限は5ティック分）。`gameTime` にも同じ量（同じ上限）を足す。
 2. ブラウザから受け取って溜めておいた入力を確定する。
 3. 蓄積がティック長に達している間、次を繰り返す（固定ティック）。
    * `Input` がポインタ入力を配る（ボタン → 最前面のシーンの順で、消費されたらそこで止める）。
@@ -108,17 +110,20 @@ phaseout の3系統を引き継ぐ。単位はすべてミリ秒。
 
 * **描画の補間は行わない:** `timeScale` が小さいと、動きはティック単位で段階的に見える。
 * **ポーズは専用のAPIを持たない:** ポーズ用のシーンを積めば、背面のシーンの `update` は止まり、`draw` だけが続く。
-* **シーン切り替え直後の時間スパイクを防ぐ:** シーンの切り替え時は次のフレームの `realDelta` を捨てる。
+* **シーン切り替え直後の時間スパイクを防ぐ:** シーン操作（切り替え、積む、戻す）があったら蓄積を捨て、次のフレームの `realDelta` を蓄積に入れない。ティックの中で操作が起きたら、そのフレームの残りのティックを回さない。ティックの外（タイマーなど）で操作が起きたら、次のフレームの先頭（手順1の前）で検知するので、そのフレームの `realDelta` を蓄積に入れず、ティックも回らない。
 * **「押した瞬間」の入力を取りこぼさない:** ティックが0回のフレームがあっても、次のティックまで保持する。
 * **音声の自動再生制限:** 最初のポインタまたはキー入力で `Sound` が AudioContext を再開する。
+
+`Engine` が各モジュールを生成し、`Time`・`Scenes`・`Layers`・`DebugOverlay` のインスタンスを `GameLoop` へ引数で渡すので、`GameLoop` はどれも import しない。`Scenes` と `Layers` も互いを import しない。
 
 依存の向きは次のとおりで、逆向きの import を禁止する。
 
 ```
-利用側の js/ → oz/index.js → Engine → GameLoop → Scenes / Layers / Input / Buttons / DebugOverlay
+利用側の js/ → oz/index.js → Engine / Scene
+Engine → Scene / GameLoop / Time / Screen / Scenes / Layers / Input / Buttons / DebugOverlay
 
-Time・Screen・Sound・Storage は他のエンジンモジュールに依存しない。
-例外: Assets → Sound（音声のデコード）、Input → Screen（座標変換）、GameLoop → Time。
+Scene・GameLoop・Time・Screen・Scenes・Layers・DebugOverlay・Sound・Storage は他のエンジンモジュールに依存しない。
+例外: Assets → Sound（音声のデコード）、Input → Screen（座標変換）。
 ```
 
 ---
@@ -129,19 +134,19 @@ Time・Screen・Sound・Storage は他のエンジンモジュールに依存し
 | モジュール | 書いてよいこと | 書いたら責務違反になること |
 | --- | --- | --- |
 | **index.js**（`oz/` 直下） | 公開APIの再export | 処理そのもの |
-| **Engine** | 起動設定の受け取りと各モジュールの初期化 | ゲームループの中身、描画処理 |
+| **Engine** | 起動設定の受け取りと各モジュールの初期化、公開操作（シーン操作、`timeScale`）の各モジュールへの委譲 | ゲームループの中身、描画処理 |
 | **GameLoop** | `requestAnimationFrame` の管理、3章の順序の呼び出し | 時間計算の詳細、ゲーム固有の処理 |
 | **Time** | `realDelta`・`gameTime`・`timeScale` の管理、固定ティックの蓄積 | 入力、描画 |
-| **Screen** | 論理解像度の設定、スクリーン座標と論理座標の変換 | 描画、入力の配信 |
+| **Screen** | 論理解像度の設定、スクリーン座標と論理座標の変換、Canvas の表示サイズの調整（縦横比を保ってウィンドウに合わせる） | 描画、入力の配信 |
 | **Layers** | レイヤー順の走査、消去、呼び出しごとの `save` / `restore` | レイヤー名の固定値、ゲーム固有の描画 |
 | **Scene** | シーンの基底クラス（2.3章のインターフェース） | 共通のゲーム処理 |
-| **Scenes** | シーンスタックの管理（切り替え、積む、戻す） | 遷移演出、BGMの操作 |
+| **Scenes** | シーンスタックの管理（切り替え、積む、戻す）、シーン操作があったことの通知（`GameLoop` が参照する） | 遷移演出、BGMの操作 |
 | **Input** | ポインタとキーボードの受信、論理座標への変換、押下状態の管理、優先順の配信 | キー割り当ての固定値、ゲーム固有の分岐 |
 | **Buttons** | シーンごとのボタン矩形の登録と当たり判定 | ボタンの描画、タブやスクロールなどのUI部品 |
 | **Assets** | 一覧に基づく画像と音声のロード、取得 | スプライトJSの読み込み（`import` で行う）、キャッシュ生成 |
 | **Sound** | AudioContext の管理、SEとBGMの再生、フェード、音量 | BGMの状態遷移（ピンチなどの判定はゲーム側） |
 | **Storage** | 単一JSONの保存と読み込み、版番号が違うときの既定値への初期化 | セーブ内容の定義 |
-| **DebugOverlay** | FPS表示 | ゲーム状態の参照 |
+| **DebugOverlay** | FPSの計算と表示 | ゲーム状態の参照 |
 | **js/main.js** | `Engine.start` の呼び出し、レイヤーの定義 | ゲームロジック、描画処理 |
 | **js/scenes/** | シーンごとの進行と、`effect/`・`entities/` の呼び出し | 細かい動きや描画の実装 |
 | **js/effect/** | 星、トレイルなどの演出の更新と描画 | ゲーム進行に影響する処理 |
