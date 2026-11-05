@@ -179,7 +179,7 @@ A/bg → B/bg → A/fg → B/fg
 
 `Engine.timeScale` で読み書きする（`Engine.start` の後から使える）。
 
-* `1` が等速。小さくすると遅くなる。`0` なら `update` は呼ばれず、`draw` は続く。
+* 起動時の値は `1`（等速）である。小さくすると遅くなる。`0` なら `update` は呼ばれず、`draw` は続く。
 * `0` でも入力は届く。再開には `onPointer`・`onKeyDown`・`onPress` の中で値を戻せばよい。
 * 入力の配信の中で変更した値は、次のフレームの時間から効く。変更したフレームは、蓄積済みの分の `update` が回ることがある。
 * 負の値や数値以外を代入すると `RangeError` になる。
@@ -323,7 +323,7 @@ class MenuScene extends Scene {
 | API | 内容 |
 | --- | --- |
 | `Assets.load({ images, sounds })` | 一覧の画像と音声をロードする。すべて終わると解決する Promise を返す（値は `undefined`） |
-| `Assets.image(名前)` | ロード済みの画像を返す。`ctx.drawImage` に渡せる |
+| `Assets.image(名前)` | ロード済みの画像を返す。`ctx.drawImage` に渡せる。`width`・`height` で元の画像の画素数を読める（縦横比を保った描画に使える） |
 
 ### `Assets.load`
 
@@ -448,7 +448,7 @@ class GameScene extends Scene {
 * `Escape` キーは入力に数えない。
 * 最初の入力そのものへの反応（`onPointer` の `'down'`、`onKeyDown`）の中で呼んだ分は鳴る。
 * canvas の外での入力でも、解除される。
-* BGM を流したいゲームは、最初の入力への反応の中で `playBgm` を呼ぶ。同じ曲なら何も起きないので、毎回呼んでよい。ボタンが消費した押下はシーンに届かない（18章）ので、必要ならボタンの `onPress` の中でも呼ぶ。
+* BGM を流したいゲームは、最初の入力への反応の中で `playBgm` を呼ぶ。同じ曲なら何も起きないので、毎回呼んでよい。ボタンが消費した押下はシーンに届かない（18章）ので、必要ならボタンの `onPress` の中でも呼ぶ。`onPress` の中で呼んだ分も、最初の入力そのものへの反応として鳴る。
 * 入力の前に音声をロードすると、Chrome がコンソールに黄色の警告を出すことがある。エラーではなく、動作に影響しない。
 
 ```js
