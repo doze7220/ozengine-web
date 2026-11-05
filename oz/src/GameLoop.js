@@ -1,5 +1,5 @@
 /**
- * @fileoverview 責務: requestAnimationFrame による1フレームの処理順序（更新、描画、デバッグ表示）の制御。
+ * @fileoverview 責務: requestAnimationFrame による1フレームの処理順序（入力の配信、更新、描画、デバッグ表示）の制御。
  * 時間の計算、シーンの管理、描画の中身は持たず、引数で受け取ったモジュールを呼ぶだけとする。
  */
 
@@ -15,6 +15,8 @@ export class GameLoop {
   #scenes;
   /** @type {{render: function(CanvasRenderingContext2D, object, object): void}} */
   #layers;
+  /** @type {{dispatch: function(): void}} */
+  #input;
   /** @type {{update: function(number): void, draw: function(CanvasRenderingContext2D): void}|null} */
   #overlay;
 
@@ -24,13 +26,15 @@ export class GameLoop {
    * @param {object} deps.time Time インスタンス
    * @param {object} deps.scenes Scenes インスタンス
    * @param {object} deps.layers Layers インスタンス
+   * @param {object} deps.input Input インスタンス
    * @param {object|null} deps.overlay DebugOverlay インスタンス。表示しない場合は null
    */
-  constructor({ ctx, time, scenes, layers, overlay }) {
+  constructor({ ctx, time, scenes, layers, input, overlay }) {
     this.#ctx = ctx;
     this.#time = time;
     this.#scenes = scenes;
     this.#layers = layers;
+    this.#input = input;
     this.#overlay = overlay;
   }
 
@@ -56,6 +60,10 @@ export class GameLoop {
       time.discardAccumulated();
     }
     time.beginFrame(now);
+    this.#input.dispatch();
+    if (scenes.consumeChanged()) {
+      time.discardAccumulated();
+    }
     while (time.consumeTick()) {
       scenes.update(time.tickLength);
       if (scenes.consumeChanged()) {

@@ -1,5 +1,5 @@
 /**
- * @fileoverview 責務: シーンの基底クラス（init / update / draw / destroy のインターフェース）。
+ * @fileoverview 責務: シーンの基底クラス（init / update / draw / destroy / onPointer / onKeyDown のインターフェース）。
  * 共通のゲーム処理は持たない。
  */
 
@@ -29,6 +29,20 @@ export class Scene {
    * @returns {void}
    */
   draw(ctx, layer, time) {}
+
+  /**
+   * ポインタ入力のとき、最前面のシーンだけに呼ばれる。戻り値は使われない。
+   * @param {{type: 'down'|'move'|'up', x: number, y: number}} pointer 種別と論理座標
+   * @returns {void}
+   */
+  onPointer(pointer) {}
+
+  /**
+   * キーを押した瞬間に、最前面のシーンだけに呼ばれる。キーリピートでは呼ばれない。
+   * @param {string} code KeyboardEvent.code の文字列
+   * @returns {void}
+   */
+  onKeyDown(code) {}
 
   /**
    * スタックから外された直後に1回呼ばれる。

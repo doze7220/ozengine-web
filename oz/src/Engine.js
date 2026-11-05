@@ -1,5 +1,5 @@
 /**
- * @fileoverview 責務: 起動設定の受け取りと各モジュールの初期化、公開操作（シーン操作、timeScale）の各モジュールへの委譲。
+ * @fileoverview 責務: 起動設定の受け取りと各モジュールの初期化、公開操作（シーン操作、timeScale、ボタンの登録、キーの状態の取得）の各モジュールへの委譲。
  * ゲームループの中身や描画処理は持たない。
  */
 import { Scene } from './Scene.js';
@@ -9,6 +9,8 @@ import { Screen } from './Screen.js';
 import { Scenes } from './Scenes.js';
 import { Layers } from './Layers.js';
 import { DebugOverlay } from './DebugOverlay.js';
+import { Input } from './Input.js';
+import { Buttons } from './Buttons.js';
 
 /** tickRate を省略したときの既定値。 */
 const DEFAULT_TICK_RATE = 60;
@@ -17,6 +19,10 @@ const DEFAULT_TICK_RATE = 60;
 let time = null;
 /** @type {Scenes|null} 起動後の Scenes。起動前は null */
 let scenes = null;
+/** @type {Input|null} 起動後の Input。起動前は null */
+let input = null;
+/** @type {Buttons|null} 起動後の Buttons。起動前は null */
+let buttons = null;
 
 /**
  * 正の有限数かを判定する。
@@ -103,16 +109,20 @@ export const Engine = {
     }
     validateConfig(config);
 
-    new Screen(config.canvas, config.width, config.height);
+    const screen = new Screen(config.canvas, config.width, config.height);
     const ctx = config.canvas.getContext('2d');
     const newTime = new Time(config.tickRate === undefined ? DEFAULT_TICK_RATE : config.tickRate);
     const newScenes = new Scenes();
     const layers = new Layers(config.layers);
+    const newButtons = new Buttons();
+    const newInput = new Input({ canvas: config.canvas, screen, scenes: newScenes, buttons: newButtons });
     const overlay = Boolean(config.debug) ? new DebugOverlay() : null;
-    const loop = new GameLoop({ ctx, time: newTime, scenes: newScenes, layers, overlay });
+    const loop = new GameLoop({ ctx, time: newTime, scenes: newScenes, layers, input: newInput, overlay });
 
     time = newTime;
     scenes = newScenes;
+    buttons = newButtons;
+    input = newInput;
     newScenes.push(config.scene);
     loop.start();
   },
@@ -173,5 +183,50 @@ export const Engine = {
       throw new Error('[oz] Engine.timeScale: Engine.start の前には使えません');
     }
     time.timeScale = value;
+  },
+
+  /**
+   * シーンにボタン（論理座標の矩形）を登録する。押下の位置が矩形の内側なら onPress が呼ばれる。
+   * @param {Scene} scene ボタンを持たせるシーン
+   * @param {object} button ボタンの設定
+   * @param {number} button.x 左端（有限の数値）
+   * @param {number} button.y 上端（有限の数値）
+   * @param {number} button.width 幅（正の有限数）
+   * @param {number} button.height 高さ（正の有限数）
+   * @param {function(): void} button.onPress 押されたときに引数なしで呼ばれる関数
+   * @returns {void}
+   * @throws {Error} 起動前、または引数が正しくない場合
+   */
+  addButton(scene, button) {
+    if (buttons === null) {
+      throw new Error('[oz] Engine.addButton: Engine.start の前には使えません');
+    }
+    validateScene('Engine.addButton', scene);
+    if (button === null || typeof button !== 'object') {
+      throw new Error('[oz] Engine.addButton: button (ボタンの設定オブジェクト) が渡されていません');
+    }
+    if (!Number.isFinite(button.x) || !Number.isFinite(button.y)) {
+      throw new Error('[oz] Engine.addButton: x / y は有限の数値で指定してください');
+    }
+    if (!isPositiveFinite(button.width) || !isPositiveFinite(button.height)) {
+      throw new Error('[oz] Engine.addButton: width / height は正の有限数で指定してください');
+    }
+    if (typeof button.onPress !== 'function') {
+      throw new Error('[oz] Engine.addButton: onPress は関数で指定してください');
+    }
+    buttons.add(scene, button);
+  },
+
+  /**
+   * キーを押している間 true を返す。値は入力の確定時だけ変わる。
+   * @param {string} code KeyboardEvent.code の文字列（'Space' など）
+   * @returns {boolean}
+   * @throws {Error} 起動前の場合
+   */
+  isKeyDown(code) {
+    if (input === null) {
+      throw new Error('[oz] Engine.isKeyDown: Engine.start の前には使えません');
+    }
+    return input.isKeyDown(code);
   },
 };
