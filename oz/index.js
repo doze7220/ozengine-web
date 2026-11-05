@@ -3,3 +3,4 @@
  */
 export { Engine } from './src/Engine.js';
 export { Scene } from './src/Scene.js';
+export { Sound } from './src/Sound.js';

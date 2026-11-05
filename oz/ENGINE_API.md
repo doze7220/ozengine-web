@@ -4,14 +4,15 @@
 
 ## 1. 概要と使えるもの
 
-利用側が使えるのは次の2つだけである。
+利用側が使えるのは次の3つだけである。
 
 ```js
-import { Engine, Scene } from 'oz';
+import { Engine, Scene, Sound } from 'oz';
 ```
 
 * `Engine` : 起動、シーンの操作、`timeScale` の読み書き、ボタンの登録、キーの状態の取得
 * `Scene` : シーンの基底クラス
+* `Sound` : 音の再生と音量
 
 ブラウザの Canvas 2D と ES Modules で動く。ビルドは不要だが、実行には静的サーバが必要である（`file://` では ES Modules が動かない）。
 
@@ -181,6 +182,7 @@ A/bg → B/bg → A/fg → B/fg
 * 入力の配信の中で変更した値は、次のフレームの時間から効く。変更したフレームは、蓄積済みの分の `update` が回ることがある。
 * 負の値や数値以外を代入すると `RangeError` になる。
 * 描画の補間はしない。小さくすると、動きはティック単位で段階的になる。
+* 音は `timeScale` の影響を受けない。`0` でも BGM とフェードは進む（21章）。
 
 ```js
 Engine.timeScale = 0.5; // 半分の速さ
@@ -204,6 +206,7 @@ Engine.timeScale = 0.5; // 半分の速さ
   * `destroy` が失敗したシーンは、`popScene`・`changeScene` のどちらでもスタックから外れている。
   * `changeScene` の途中で `destroy` が失敗すると、新しいシーンは積まれず、スタックは途中まで外れた状態で残る。
 * `Engine.start` の中で最初のシーンの `init` が失敗した場合は、例外が `start` から投げられ、ループは始まらない。
+* `Sound.playSe`・`Sound.playBgm` のエラー（一覧にない名前など。21章）をフレーム処理の中で起こすと、シーンのメソッドの例外と同じくループが止まる。
 
 ## 16. ポインタ入力
 
@@ -307,3 +310,79 @@ class MenuScene extends Scene {
 * `onPointer`・`onKeyDown`・`onPress` は、`draw` の中やブラウザのイベントの中からは呼ばれない。
 * 1フレームの順序: 時間を進める → 届いた順に入力を配る → `update` を0回以上 → `draw`。
 * ポインタはボタン → 最前面のシーンの順に、キーは最前面のシーンに届く。
+
+## 21. サウンド
+
+`Sound` で SE と BGM を鳴らし、音量を変える。音声ファイルは `Assets.load` の `sounds` に書いた名前で指定する（20章）。一覧では SE と BGM を区別しない。`Sound` は `Engine.start` の前から使える（`Engine` の各操作と違い、前に呼んでもエラーにならない）。
+
+| API | 内容 |
+| --- | --- |
+| `Sound.playSe(名前)` | SE を1回鳴らす |
+| `Sound.playBgm(名前, { fadeMs })` | BGM をループで流す。`fadeMs` はフェードインの長さ（ミリ秒、既定値 `0`） |
+| `Sound.stopBgm({ fadeMs })` | BGM を止める。`fadeMs` はフェードアウトの長さ（ミリ秒、既定値 `0`） |
+| `Sound.masterVolume` | 全体の音量（読み書き） |
+| `Sound.bgmVolume` | BGM の音量（読み書き） |
+| `Sound.seVolume` | SE の音量（読み書き） |
+
+### SE
+
+* 呼ぶと最初から鳴る。同じ SE を重ねて鳴らせる。
+* 一覧にない名前や、ロードの終わっていない名前はエラーになる。
+
+### BGM
+
+* ループで流れる。`fadeMs` は `0` 以上の有限数で、そうでなければ `RangeError` になる（`playBgm`・`stopBgm` とも）。
+* 流れている曲と同じ名前の `playBgm` は何もしない（フェードインの途中でも同じ）。そのため、シーンをまたいで流し続けられる。
+* 別の曲を `playBgm` すると、前の曲がフェードアウトし、新しい曲がフェードインするクロスフェードになる（長さはどちらも新しい曲の `fadeMs`）。
+* フェードアウト中の曲の名前を `playBgm` すると、その曲が頭から新しく流れ始める（フェードアウト中の音はそのまま消える）。
+* フェードインの途中で `stopBgm` を呼んでも、音量は飛ばず、その時点の音量からフェードアウトする。
+* BGM が流れていないときの `stopBgm` は何もしない。
+* 一覧にない名前や、ロードの終わっていない名前はエラーになる。
+
+### 読み込みに失敗した名前
+
+`Assets.load` で読み込みに失敗した名前の `playSe`・`playBgm` は、エラーにならず何もしない。流れている BGM があれば、そのまま続く。
+
+### 音量
+
+* `0`〜`1` の数値で、既定値は `1`。範囲外と数値以外（`NaN`・文字列・`null` など）は `RangeError` になり、値は変わらない。
+* 再生中の音にもすぐ効く。BGM のフェードとは掛け合わされる。
+* ロードの前から設定できる。
+* ミュートは `Sound.masterVolume = 0` で行う。
+
+### AudioContext
+
+音を使わないゲームでは AudioContext が作られない。
+
+### 時間
+
+音は実時間で進む。`timeScale` やポーズ用のシーンの影響を受けず、`timeScale` が `0` でも BGM とフェードは進む。タブを裏に回しても止まらない。
+
+### 最初の入力まで
+
+ブラウザの制限で、ユーザーの入力があるまで音は鳴らせない。
+
+* 最初の入力より前の `playSe`・`playBgm` は、エラーにせず捨てる。入力のあとに鳴らし直すことはしない。
+* 名前の確認（一覧にない名前のエラー）と `fadeMs` の確認は、入力の前でも行う。
+* `Escape` キーは入力に数えない。
+* 最初の入力そのものへの反応（`onPointer` の `'down'`、`onKeyDown`）の中で呼んだ分は鳴る。
+* canvas の外での入力でも、解除される。
+* BGM を流したいゲームは、最初の入力への反応の中で `playBgm` を呼ぶ。同じ曲なら何も起きないので、毎回呼んでよい。ボタンが消費した押下はシーンに届かない（18章）ので、必要ならボタンの `onPress` の中でも呼ぶ。
+* 入力の前に音声をロードすると、Chrome がコンソールに黄色の警告を出すことがある。エラーではなく、動作に影響しない。
+
+```js
+import { Engine, Scene, Sound } from 'oz';
+
+class TitleScene extends Scene {
+  onPointer({ type }) {
+    if (type === 'down') Sound.playBgm('title', { fadeMs: 1000 });
+  }
+
+  onKeyDown(code) {
+    Sound.playBgm('title', { fadeMs: 1000 });
+    if (code === 'Space') Sound.playSe('decide');
+  }
+}
+
+Sound.bgmVolume = 0.5; // ロードの前から設定できる
+```
