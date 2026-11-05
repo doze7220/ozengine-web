@@ -112,19 +112,22 @@ phaseout の3系統を引き継ぐ。単位はすべてミリ秒。
 * **シーン切り替え直後の時間スパイクを防ぐ:** シーン操作（切り替え、積む、戻す）があったら蓄積を捨て、次のフレームの `realDelta` を蓄積に入れない。ティックの中で操作が起きたら、そのフレームの残りのティックを回さない。入力の配信（手順2）の中で操作が起きたら、そのフレームのティックを回さない。そのフレームの残りの入力は、新しい最前面のシーンへ配る。ティックの外（タイマーなど）で操作が起きたら、次のフレームの先頭（手順1の前）で検知するので、そのフレームの `realDelta` を蓄積に入れず、ティックも回らない。
 * **「押した瞬間」の入力を取りこぼさない:** 入力は毎フレーム配るので、ティックが0回のフレームでも届く。押してから離すまでが1フレームより短いキーも、`onKeyDown` を呼び、そのフレームの間は `isKeyDown` を `true` にして、次のフレームで `false` にする。
 * **ブラウザのイベントの中ではシーンの処理を呼ばない:** `onPointer`・`onKeyDown`・`onPress` は手順2の中からだけ呼ぶ。
-* **音声の自動再生制限:** 最初のポインタまたはキー入力で `Sound` が AudioContext を再開する。
+* **音声の自動再生制限:** 入力の配信はフレームの中なので、そこからは自動再生制限を解除できない。`Sound` は自分で `window` に `pointerdown`・`pointerup`・`keydown` を capture で登録し、そのイベントの中で直接 `AudioContext.resume()` を呼ぶ（`Input` を経由しない）。イベントの中では `resume()` の呼び出しと入力の記録だけを行い、シーンの処理を呼ばない。`Escape` の `keydown` は入力に数えない。入力があり AudioContext が `running` になったら登録を解除する。最初の入力より前の再生の要求は捨てる。
+* **音の時刻:** フェードと停止の予定には `AudioContext.currentTime` を使う。憲法3章「時間の受け渡し」は、ゲームの更新に使う時間を対象とするものと解釈し、音の予定時刻にだけ使うことを認める（発注者の決定）。その値をゲームの更新や描画に使わず、公開もしない。音は `timeScale` と無関係に実時間で進む。
 
 `Engine` が各モジュールを生成する。`Time`・`Scenes`・`Layers`・`Input`・`DebugOverlay` のインスタンスを `GameLoop` へ、`Screen`・`Scenes`・`Buttons` のインスタンスを `Input` へ引数で渡すので、`GameLoop` と `Input` はこれらを import しない。`Scenes` と `Layers` も互いを import しない。
 
 依存の向きは次のとおりで、逆向きの import を禁止する。
 
 ```
-利用側の js/ → oz/index.js → Engine / Scene
+利用側の js/ → oz/index.js → Engine / Scene / Assets / Sound / Storage
 Engine → Scene / GameLoop / Time / Screen / Scenes / Layers / Input / Buttons / DebugOverlay
 
 Scene・GameLoop・Time・Screen・Scenes・Layers・Input・Buttons・DebugOverlay・Sound・Storage は他のエンジンモジュールに依存しない。
-例外: Assets → Sound（音声のデコード）。
+例外: Assets → Sound（音声のデコードと、名前で預けるため）。
 ```
+
+`Engine`・`GameLoop`・`Input` は `Assets`・`Sound`・`Storage` を import しない。
 
 ---
 
@@ -143,9 +146,9 @@ Scene・GameLoop・Time・Screen・Scenes・Layers・Input・Buttons・DebugOver
 | **Scenes** | シーンスタックの管理（切り替え、積む、戻す）、シーン操作があったことの通知（`GameLoop` が参照する）、最前面のシーンの参照 | 遷移演出、BGMの操作 |
 | **Input** | ポインタとキーボードの受信、論理座標への変換、押下状態の管理、フレームごとの確定、優先順の配信 | キー割り当ての固定値、ゲーム固有の分岐 |
 | **Buttons** | シーンごとのボタン矩形の登録と当たり判定 | ボタンの描画、タブやスクロールなどのUI部品 |
-| **Assets** | 一覧に基づく画像と音声のロード、取得 | スプライトJSの読み込み（`import` で行う）、キャッシュ生成 |
-| **Sound** | AudioContext の管理、SEとBGMの再生、フェード、音量 | BGMの状態遷移（ピンチなどの判定はゲーム側） |
-| **Storage** | 単一JSONの保存と読み込み、版番号が違うときの既定値への初期化 | セーブ内容の定義 |
+| **Assets** | 一覧に基づく画像と音声のロード、取得、読み込みに失敗したときの代替（透明な画像、警告） | スプライトJSの読み込み（`import` で行う）、キャッシュ生成、音の再生 |
+| **Sound** | AudioContext の管理（入力での再開を含む）、音声のデコードと名前での保持、SEとBGMの再生、フェード、音量 | BGMの状態遷移（ピンチなどの判定はゲーム側）、ファイルの読み込み |
+| **Storage** | 単一JSONの保存と読み込み、版番号が違うときの既定値への初期化、`localStorage` が使えないときのメモリ上での継続 | セーブ内容の定義、移行処理 |
 | **DebugOverlay** | FPSの計算と表示 | ゲーム状態の参照 |
 | **js/main.js** | `Engine.start` の呼び出し、レイヤーの定義 | ゲームロジック、描画処理 |
 | **js/scenes/** | シーンごとの進行と、`effect/`・`entities/` の呼び出し | 細かい動きや描画の実装 |
