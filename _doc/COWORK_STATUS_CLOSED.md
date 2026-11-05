@@ -13,3 +13,4 @@
 
 * **Phase 01-01 から先送りした画面での確認（`timeScale` の変更、シーンの切り替え、シーンを積む・戻す）:** Phase 01-02 のテストプレイで確認済み（RES: `./_log/res/261105_2007_RES_Phase01-02_入力とボタン.md` タスク4）。
 * **`timeScale` が `0` の間の入力の扱い:** 発注者の決定により、入力は `timeScale` に関係なく毎フレーム、固定ティックの前に配る（同RES タスク2・タスク3、`PROJECT_ARCHITECTURE.md` 3章）。
+* **`Sound` の AudioContext の再開の方法:** 入力の配信はフレームの中なので、`Sound` が自分で `window` に `pointerdown`・`pointerup`・`keydown` を capture で登録し、そのイベントの中で直接 `resume()` を呼ぶ形にした（RES: `./_log/res/261105_2139_RES_Phase01-03_アセットとサウンドとセーブ.md` タスク1、`PROJECT_ARCHITECTURE.md` 3章）。
