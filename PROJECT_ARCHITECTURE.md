@@ -17,6 +17,7 @@ ozengine-web/
 │   ├── index.js
 │   ├── ENGINE_API.md
 │   ├── VERSION
+│   ├── FINGERPRINTS.txt    # `oz/` の各ファイルの指紋（SHA-256）の一覧（4章の規則）
 │   └── src/
 ├── js/                     # アプリのコード（ゲームの土台）
 │   ├── main.js
@@ -29,6 +30,7 @@ ozengine-web/
 │   └── sounds/
 ├── test/                   # 自動テスト（`node --test` でのみ実行。`oz/` の外に置き、新規プロジェクトにはコピーしない）
 ├── _doc/
+│   └── newgame/            # 新規プロジェクトの手順書・ゲーム用のルールの文面・Claude Code の設定例（ゲームのプロジェクトを作るときだけ使い、コピーしない）
 ├── _log/
 ├── CLAUDE.md
 ├── PROJECT_ARCHITECTURE.md
@@ -36,7 +38,7 @@ ozengine-web/
 └── README.md
 ```
 
-新規プロジェクトは、`template-app` を元にして、本リポジトリの `index.html`・`oz/`・`js/`・`assets/` をコピーして作る。コピー後は `ozengine sample` を検索して目印の付いたコードを消し（書き方は憲法3章）、`assets/` の中身を入れ替える。コピー後のエンジン更新は `oz/` の置き換えだけで行う。
+新規プロジェクト（ゲームのプロジェクト）の作り方、エンジンの更新方法、`oz/` の改変の確かめ方、エンジンの不足の伝え方は、`_doc/newgame/NEW_GAME_GUIDE.md` に書く。ゲームの憲法に貼り付けるルールの文面は `_doc/newgame/GAME_RULES.md`、ゲームのプロジェクトの Claude Code の設定例は `_doc/newgame/settings.example.json` にある。
 
 エンジンと素材の import には、`index.html` で定義する import map を使う。
 
@@ -51,23 +53,9 @@ ozengine-web/
 ### 2. データ構造（Model）の概要
 
 #### 2.1 スプライトJS（`assets/sprites/*.js`）
-スプライトJSの形式（既定の export に入るデータのキー、`draw` の中身など）の唯一の記載箇所は、OZ Vector Editor のリポジトリ（`D:\ozlab\ozvectoreditor`）の `PROJECT_ARCHITECTURE.md` 2章「スプライト（書き出し形式）」の項である。本章には形式を書き写さず、エンジン側の約束だけを書く。
+スプライトJSのエンジン側の約束（使い方、`draw` の約束、座標、配置、つなぎのスプライト、組み立て用のJS）の唯一の記載箇所は `oz/ENGINE_API.md` 23章「スプライトJS」である。形式の唯一の記載箇所（エディタのリポジトリ）も同章に書く。本章には書き写さない。
 
-* 利用側は、スプライトJSを `import` し、既定の export のオブジェクトの `draw(ctx)` を呼ぶだけである。エンジンは中身を解析せず、読み込みもしない（読み込みは利用側の `import`）。現時点では、`draw` 以外のキー（エディタの書き出しに入る `format`・`formatVersion`・`bounds`・`elements`・`source` など）は、エンジンも利用側も読まない。
-* `draw` は `ctx` の状態を元に戻して終わる。
-* 座標の単位は px で、基準点はワールド座標の原点 (0, 0)、y 軸は下向きである。エディタの px はそのままゲームの px になる。
-* 配置（位置・回転・拡大縮小）は、呼ぶ側が `ctx` の変換で行ってから `draw` を呼ぶ。
-* 土台の機体は前方を +X とする（エディタで描くときも機首を +X に向ける）。
-* スプライトは見た目だけを持つ。位置・HP・`update()` などの動きは `js/` 側のクラスが持つ。
-
-**つなぎのスプライト:** エディタで描けない絵を AI が手で書く場合（つなぎのスプライト）も、既定の export で `draw(ctx)` を持つ形にする。`format` などのデータのキーは持たなくてよい（現在の手書きの `ship.js` は `export default { draw }`）。手で書いてよい条件は憲法3章「生成物の手編集禁止」に従う。
-
-**組み立て用のJS（名前の頭に `_`）の扱い:**
-
-* スプライトJSは外部依存のない1ファイルとする。ただし、組み立て用のJS（名前の頭に `_`。例 `_hero.js`）はこの例外とし、同じ `assets/sprites/` にあるパーツのスプライトJSを相対パス（`./body.js` など）で `import` してよい。エンジン（`oz`）・`js/`・`assets/sprites/` の外のファイルは `import` してはならない。
-* 組み立て用のJSも、既定の export で `draw(ctx)` を持つ点は同じである（配置は `ctx` の変換で行う）。
-* 組み立て用のJSは、エディタの P7（アニメーションエディタモード）で書き出す想定であり、現時点では存在せず、読み込みの実装もしない（M2 以降）。キーフレームのために時間の引数（`draw(ctx, t)` など）を足すかどうかは、そのときに決める。
-* エディタ側の使い方の例は、上記のエディタ側の項にある。
+土台の機体は前方を +X とする（エディタで描くときも機首を +X に向ける）。
 
 #### 2.2 起動設定（`Engine.start` に渡す）
 | 項目 | 内容 |
@@ -157,18 +145,30 @@ Scene・GameLoop・Time・Screen・Scenes・Layers・Input・Buttons・DebugOver
 | **Sound** | AudioContext の管理（入力での再開を含む）、音声のデコードと名前での保持、SEとBGMの再生、フェード、音量 | BGMの状態遷移（ピンチなどの判定はゲーム側）、ファイルの読み込み |
 | **Storage** | 単一JSONの保存と読み込み、版番号が違うときの既定値への初期化、`localStorage` が使えないときのメモリ上での継続 | セーブ内容の定義、移行処理 |
 | **DebugOverlay** | FPSの計算と表示 | ゲーム状態の参照 |
-| **js/main.js** | `Engine.start` の呼び出し、レイヤーの定義、見本の部分での最初のシーンへの解像度の受け渡しと `debug` の指定 | ゲームロジック、描画処理 |
+| **js/main.js** | `Engine.start` に渡す設定（解像度、レイヤー、最初のシーン、`debug` など）の用意と `Engine.start` の呼び出し | ゲームロジック、描画処理 |
 | **js/scenes/** | シーンごとの進行と、`effect/`・`entities/` の呼び出し、`ui` レイヤーの画面構成（文字、画像、ボタン、暗幕）、スプライトの配置（位置と回転の設定と `draw` の呼び出し）。タイトルとプレイの共通処理（`FlightScene`）、ミュートの保存と反映（`mute.js`）、文字の共通処理（`uiText.js`）もここに置く | 細かい動きや描画の実装（機体の動き、星・トレイル・風の描画） |
 | **js/effect/** | 星、トレイルなどの演出の更新と描画 | ゲーム進行に影響する処理 |
 | **js/entities/** | 位置や状態の保持、動きの更新、自動操縦 | 描画命令の直書き（描画はスプライトや `effect/` に任せる） |
-| **assets/sprites/*.js** | 見た目の描画（2.1章の規約）。現在の `ship.js` は手書きのつなぎのスプライトで、エディタの P5（塗り）の後に、エディタの書き出しファイルに差し替える | 位置や動き、外部への依存（組み立て用のJSがパーツのスプライトJSを `import` することを除く） |
+| **assets/sprites/*.js** | 見た目の描画（`oz/ENGINE_API.md` 23章の約束）。現在の `ship.js` は手書きのつなぎのスプライトで、エディタの P5（塗り）の後に、エディタの書き出しファイルに差し替える | 位置や動き、外部への依存（組み立て用のJSがパーツのスプライトJSを `import` することを除く） |
 
 **エンジンに入れないもの:** スプライトの描画処理、アニメーション、カメラ、当たり判定、物理、パーティクル、Entity基底クラス、遷移演出、タブやスクロールなどのUI部品。必要になったPhaseで、発注者の承認を得てから検討する（憲法3章「先回り実装の禁止」）。
 
 **自動テスト（`test/`）の規則:**
 
-* **実行方法:** リポジトリのルートで `node --test`（引数なし）を実行し、結果の `fail 0` で判定する（憲法1章「検証コマンド」）。`package.json` は作らず、使ってよいのは `node:test` と `node:assert/strict` だけである。Node.js はテストの実行にのみ使い、ゲームの実行・配信には使わない。確認した版は v24.15.0 である。
-* **置き場所と命名:** `test/<対象モジュール名>[.<観点>].test.js`。`test/` にはテスト以外の `.js`（共有の補助モジュールを含む）を置かず、補助関数は各テストファイルの中に書く。`node --test` は既定のパターンに合うファイルをすべて実行するので、そのパターンに合う名前（`*.test.js`・`*-test.js`・`*_test.js`・`test-*.js`・`test.js`）を `test/` の外のファイルに付けてはならない。
-* **import の規則:** 対象を `oz/src/` から相対パスで直接 import し、`oz/index.js` は import しない。公開されたものだけを通して確かめ、テストのためにソースを変えない。依存は `test/ → oz/src/` の一方向で、`oz/`・`js/`・`assets/`・`index.html` は `test/` を参照しない。
+* **実行方法:** リポジトリのルートで `node --test`（引数なし）を実行し、結果の `fail 0` で判定する（憲法1章「検証コマンド」）。`package.json` は作らず、使ってよいのは Node.js の標準モジュールだけである（npm パッケージは使わない）。`node:test` と `node:assert/strict` を基本とし、指紋一覧のテストでは `node:crypto`・`node:fs`・`node:path`・`node:url` も使う。Node.js はテストの実行にのみ使い、ゲームの実行・配信には使わない。確認した版は v24.15.0 である。
+* **置き場所と命名:** `test/<対象モジュール名>[.<観点>].test.js`（対象がモジュールでない場合は、対象のファイルの名前を使う。指紋一覧は `test/FINGERPRINTS.test.js`）。`test/` にはテスト以外の `.js`（共有の補助モジュールを含む）を置かず、補助関数は各テストファイルの中に書く。`node --test` は既定のパターンに合うファイルをすべて実行するので、そのパターンに合う名前（`*.test.js`・`*-test.js`・`*_test.js`・`test-*.js`・`test.js`）を `test/` の外のファイルに付けてはならない。
+* **import の規則:** 対象を `oz/src/` から相対パスで直接 import し、`oz/index.js` は import しない。公開されたものだけを通して確かめ、テストのためにソースを変えない。依存は `test/ → oz/src/` の一方向で、`oz/`・`js/`・`assets/`・`index.html` は `test/` を参照しない。指紋一覧のテストは `oz/src/` を import せず、`oz/` 以下のファイルをデータとして読む（`oz/` のパスは `import.meta.url` から求める）。
 * **偽の `window`:** テストファイル内の素のオブジェクトで作り、`globalThis.window` に置いた場合はテストの終了時に（`t.after` で）元に戻す。`window` 以外のグローバルには代入しない。`t.after` は登録した順に動くため、1つのテスト（`t`）で偽の `window` を置くのは1回だけにし、ケースを繰り返すときはサブテストに分ける。`console.warn` は `t.mock.method` で抑止する。状態を持つ `Storage` は、クエリ付きの動的 import でテストごとに読み込み直す。
-* **対象:** `Time`・`Scenes`・`Screen`・`Storage`。テストしないモジュール: `Scene`・`Input`・`Sound`・`Assets`・`Layers`・`GameLoop`・`DebugOverlay`・`Engine`・`Buttons`（`Sound` は読み込み時に `window` を使うため、対象にするときに登録の時期を検討する）。
+* **対象:** `Time`・`Scenes`・`Screen`・`Storage`、指紋一覧（`oz/FINGERPRINTS.txt` が `oz/` の中身と一致すること）。テストしないモジュール: `Scene`・`Input`・`Sound`・`Assets`・`Layers`・`GameLoop`・`DebugOverlay`・`Engine`・`Buttons`（`Sound` は読み込み時に `window` を使うため、対象にするときに登録の時期を検討する）。
+
+**指紋一覧（`oz/FINGERPRINTS.txt`）の規則:**
+
+* **形式:** 1行に1ファイル、`<SHA-256 の16進64文字><空白2つ><oz/ からの相対パス>`、パスのバイト順、LF で終わる。一覧ファイル自身は含めない。指紋は中身から CR（0x0D）を取り除いてから求める（作業ツリーの改行が LF と CRLF のどちらでも同じ指紋になるようにするため）。
+* **作り直しの時期:** `oz/` の中のファイル（`ENGINE_API.md` だけの変更を含む）を変更・追加・削除するタスクの最後に作り直し、`node --test` が `fail 0` であることを確かめる。一覧を手で編集しない。
+* **作り直しのコマンド**（Git Bash、リポジトリのルートで実行）:
+
+  ```bash
+  (cd oz && find . -type f ! -path ./FINGERPRINTS.txt | sed 's|^\./||' | LC_ALL=C sort | while IFS= read -r f; do printf '%s  %s\n' "$(tr -d '\r' < "$f" | sha256sum | cut -c1-64)" "$f"; done > FINGERPRINTS.txt)
+  ```
+
+* 一覧が古いと `test/FINGERPRINTS.test.js` が失敗する。ゲームのプロジェクトでの照合は `_doc/newgame/NEW_GAME_GUIDE.md` 5章に書く。
