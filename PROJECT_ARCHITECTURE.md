@@ -27,6 +27,7 @@ ozengine-web/
 │   ├── sprites/
 │   ├── images/
 │   └── sounds/
+├── test/                   # 自動テスト（`node --test` でのみ実行。`oz/` の外に置き、新規プロジェクトにはコピーしない）
 ├── _doc/
 ├── _log/
 ├── CLAUDE.md
@@ -163,3 +164,11 @@ Scene・GameLoop・Time・Screen・Scenes・Layers・Input・Buttons・DebugOver
 | **assets/sprites/*.js** | 見た目の描画（2.1章の規約）。現在の `ship.js` は手書きのつなぎのスプライトで、エディタの P5（塗り）の後に、エディタの書き出しファイルに差し替える | 位置や動き、外部への依存（組み立て用のJSがパーツのスプライトJSを `import` することを除く） |
 
 **エンジンに入れないもの:** スプライトの描画処理、アニメーション、カメラ、当たり判定、物理、パーティクル、Entity基底クラス、遷移演出、タブやスクロールなどのUI部品。必要になったPhaseで、発注者の承認を得てから検討する（憲法3章「先回り実装の禁止」）。
+
+**自動テスト（`test/`）の規則:**
+
+* **実行方法:** リポジトリのルートで `node --test`（引数なし）を実行し、結果の `fail 0` で判定する（憲法1章「検証コマンド」）。`package.json` は作らず、使ってよいのは `node:test` と `node:assert/strict` だけである。Node.js はテストの実行にのみ使い、ゲームの実行・配信には使わない。確認した版は v24.15.0 である。
+* **置き場所と命名:** `test/<対象モジュール名>[.<観点>].test.js`。`test/` にはテスト以外の `.js`（共有の補助モジュールを含む）を置かず、補助関数は各テストファイルの中に書く。`node --test` は既定のパターンに合うファイルをすべて実行するので、そのパターンに合う名前（`*.test.js`・`*-test.js`・`*_test.js`・`test-*.js`・`test.js`）を `test/` の外のファイルに付けてはならない。
+* **import の規則:** 対象を `oz/src/` から相対パスで直接 import し、`oz/index.js` は import しない。公開されたものだけを通して確かめ、テストのためにソースを変えない。依存は `test/ → oz/src/` の一方向で、`oz/`・`js/`・`assets/`・`index.html` は `test/` を参照しない。
+* **偽の `window`:** テストファイル内の素のオブジェクトで作り、`globalThis.window` に置いた場合はテストの終了時に（`t.after` で）元に戻す。`window` 以外のグローバルには代入しない。`t.after` は登録した順に動くため、1つのテスト（`t`）で偽の `window` を置くのは1回だけにし、ケースを繰り返すときはサブテストに分ける。`console.warn` は `t.mock.method` で抑止する。状態を持つ `Storage` は、クエリ付きの動的 import でテストごとに読み込み直す。
+* **対象:** `Time`・`Scenes`・`Screen`・`Storage`。テストしないモジュール: `Scene`・`Input`・`Sound`・`Assets`・`Layers`・`GameLoop`・`DebugOverlay`・`Engine`・`Buttons`（`Sound` は読み込み時に `window` を使うため、対象にするときに登録の時期を検討する）。
