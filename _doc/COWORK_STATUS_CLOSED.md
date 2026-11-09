@@ -38,3 +38,6 @@
 
 #### Phase 02-02（2026-11-09）
 * **`ship.js` の差し替え時にブラウザのキャッシュで古いスプライトが表示される件:** Phase 02-02 で Ctrl+Shift+R を案内して確認し、問題なく表示された。M1 を確認し（エディタの書き出しを `assets/sprites/ship.js` に置くだけで、`js/` を変えずにタイトルとプレイに表示）、背景と手書きの機体は元に戻した。エディタへの返信は `D:\ozlab\ozvectoreditor\_doc\BRIDGE_FROM_ENGINE.md`（往復は1回で完了。エディタ側のリポジトリでは未コミット）（RES: `./_log/res/261109_1300_RES_Interrupt_Phase02-02_M1の確認とエディタとの往復.md`）。
+
+#### Phase 02-03（2026-11-09）
+* **`PROJECT_ARCHITECTURE.md` 2.1章が旧形式（名前付きの `format`・`draw(ctx, t, opts)`）のままだった件:** 2.1章を、形式の定義はエディタ側（`D:\ozlab\ozvectoreditor\PROJECT_ARCHITECTURE.md` 2章）への参照とし、エンジン側の約束・つなぎのスプライト・組み立て用のJS（名前の頭に `_`。同じ `assets/sprites/` のパーツだけを相対パスで import してよい例外）の扱いだけを書く形に改訂した。4章の `assets/sprites/*.js` の行と、憲法3章「生成物の手編集禁止」の文面（つなぎのスプライトの扱い。発注者承認）も改めた。連絡票と `_doc/bridge_samples/` は削除した（RES: `./_log/res/261109_1717_RES_Interrupt_Phase02-03_スプライトの規約の改訂.md`）。
