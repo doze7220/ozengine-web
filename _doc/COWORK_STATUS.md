@@ -11,14 +11,13 @@
 ---
 
 ### 1. プロジェクト現況スナップショット（最終更新：2026-11-09）
-* Phase 01 クローズ済み。大番号移行の棚卸しを済ませた（Phase 01 の DIR・REQ・RES は各 `closed/` へ移動）。Phase 02 進行中（02-01 完了。進行状況の正本は DIR）。
+* Phase 01 クローズ済み。大番号移行の棚卸しを済ませた（Phase 01 の DIR・REQ・RES は各 `closed/` へ移動）。Phase 02 進行中（02-01・02-02 完了。M1 を確認済み。進行状況の正本は DIR）。
 
 ---
 
 ### 2. 現在進行中のタスク・懸念事項（毎セッション更新）
 * **A. 次フェイズ／Interruptへ持ち越す事項**
   * **Phase 02-03（スプライトの規約の改訂）:** Phase 02-01 で、手書きの `assets/sprites/ship.js` を `export default { draw }`（`draw(ctx)` のみ。`format` なし）に、`js/scenes/FlightScene.js` を既定の import に変えた。`PROJECT_ARCHITECTURE.md` 2.1章の export の表（名前付きの `format`・`draw(ctx, t, opts)`）は旧形式のままで、02-03 で改訂する。RES: `./_log/res/261109_1248_RES_Interrupt_Phase02-01_スプライトJSの形式をエディタに合わせる.md` 5章。
-  * **Phase 02-02（M1 の確認）:** `assets/sprites/ship.js` を差し替えて確認するときは、ブラウザのキャッシュで古いスプライトが表示されることがある（02-01 のテストプレイで発生）。発注者にはキャッシュを使わない再読み込み（Ctrl+Shift+R）を案内する。
   * **スマートフォンで確認できるようになったら:** タッチの最初の押下で音の出始めが指を離すときになり、押したままの間に呼んだ `playSe` が離したときにまとめて鳴ることは、PC の Chrome のタッチの再現機能でしか確認していない。実機（iPhone の Safari を含む）で確認し、結果に合わせて `oz/ENGINE_API.md` 21章「タッチの最初の押下」の最後の項目を直す。確認の手順は RES（`./_log/res/closed/261105_2358_RES_Interrupt_タッチの最初の押下と音の出始め.md`）4章にある。確認用ページはリポジトリに入っていないので、作り直す。
   * **Phase 03 以降（新規プロジェクトの作り方の整備）:** スプライトの規約（`format`・`draw`）は `PROJECT_ARCHITECTURE.md` 2.1章にあり、`oz/ENGINE_API.md` には `import` で読み込むことしか書いていない（エンジンが中身を解析しないため）。案内の置き場所を判断する。
   * **Phase 03 以降（新規プロジェクトの作り方の整備）:** `PROJECT_ARCHITECTURE.md` 4章の `js/main.js` の行にある「見本の部分」は、目印を消した新規プロジェクトでは該当がなくなる。この記述を見直す。
