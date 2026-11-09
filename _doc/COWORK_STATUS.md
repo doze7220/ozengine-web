@@ -11,7 +11,7 @@
 ---
 
 ### 1. プロジェクト現況スナップショット（最終更新：2026-11-09）
-* Phase 01 クローズ済み。大番号移行の棚卸しを済ませた（Phase 01 の DIR・REQ・RES は各 `closed/` へ移動）。Phase 02 進行中（02-01〜02-04 完了。M1 を確認済み。自動テスト（`node --test`）を検証コマンドに加えた。進行状況の正本は DIR）。
+* Phase 02 クローズ済み。Phase 03 未着手。Phase 03 のDIR策定の前に `_doc/PROJECT_PHASE_TRANSITION_CLEANUP.md` の棚卸しを行う（Phase 02 の DIR・REQ・RES はまだ `closed/` へ移していない）。
 
 ---
 
@@ -28,12 +28,14 @@
 ### 3. 保留・後回しにした事項（バックログ）
 * フレーム処理の外からのシーン操作で `init`・`destroy` が例外を投げると、ループは止まらず、スタックが途中の状態で残る。現在は `oz/ENGINE_API.md` 15章に書くだけとしている。
 * `oz/index.js` を import した時点で `window` が必要である（`Sound` が入力の登録を読み込み時に行うため）。Phase 02-04 の自動テストは `oz/src/` を直接 import し、`oz/index.js` を読み込まないことで回避した。`Sound` をテストの対象にするときに、スタブを用意してから動的 import するか、登録の時期を見直すかを決める（`PROJECT_ARCHITECTURE.md` 4章「自動テスト（`test/`）の規則」）。
+* `Storage` の保存データの読み込みでは、版番号が同じなら保存値の型や中身を確かめずにそのまま使う。このことは `oz/ENGINE_API.md` 22章に書かれていない。書くかどうかを判断する（RES: `./_log/res/261109_1730_RES_Phase02-04_自動テストの導入.md` 5章）。
 * AudioContext が `running` になると再開用のイベントを解除するので、iOS の割り込みなどでブラウザが止めた場合は自動で再開しない。モバイル対応をするときに扱う。
 
 ---
 
 ### 4. Phaseクローズ記録
 * **Phase 01（最小エンジンとゲームの土台）:** 2026-11-05 クローズ。`oz/` の最小エンジンと、その上で動くゲームの土台（`index.html`・`js/`・`assets/`）が完成した。DIR 1章の完了の目安の4点を確認した。持ち越しは本ファイルの2章・3章、解決済み・破棄した項目は `_doc/COWORK_STATUS_CLOSED.md` にある。
+* **Phase 02（スプライトJSの結合と自動テストの導入）:** 2026-11-09 クローズ。OZ Vector Editor の書き出したスプライトJSを `assets/sprites/` に置くだけで土台に表示できるようになり、M1 を達成した。`PROJECT_ARCHITECTURE.md` 2.1章をエンジン側の約束だけの形に改訂し、`Time`・`Scenes`・`Screen`・`Storage` の自動テスト（`node --test`）を検証コマンドに加えた。DIR 1章の完了の目安の3点を確認した。持ち越しは本ファイルの3章、解決済み・破棄した項目は `_doc/COWORK_STATUS_CLOSED.md` にある。
 
 ---
 
