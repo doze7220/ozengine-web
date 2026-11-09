@@ -335,7 +335,7 @@ class MenuScene extends Scene {
   * 流れている BGM の名前を再ロードしても、流れている音はそのまま続く。
 * `images` と `sounds` の名前は別々に管理する。同じ名前を両方に使ってよい。音声の名前は `Sound` で使う（21章）。
 * パスはページ（`index.html`）からの相対パスで書く。import map の `assets/` は `import` にしか効かないので、ここでは使えない。
-* スプライトJSは対象外である。`import` で読み込む。
+* スプライトJSは対象外である。`import` で読み込む（23章）。
 * 進捗の通知はない。ロード中の表示はシーンで行う。
 
 ### 引数が不正なとき
@@ -536,3 +536,55 @@ class SettingsScene extends Scene {
   }
 }
 ```
+
+## 23. スプライトJS
+
+スプライトJSは、`assets/sprites/` に置く、見た目を描くJSである。OZ Vector Editor が書き出す。エンジンは中身を解析せず、読み込みもしない（`Assets.load` の対象外。20章）。
+
+### 使い方
+利用側は `import` し、既定の export のオブジェクトの `draw(ctx)` を呼ぶだけである。import map の `assets/`（2章）を使って、次のように書く。
+
+```js
+import player from 'assets/sprites/player.js';
+```
+
+* `draw` 以外のキー（エディタの書き出しに入る `format`・`formatVersion`・`bounds`・`elements`・`source` など）は、エンジンも利用側も読まない。
+* `draw(ctx)` は `ctx` の状態を元に戻して終わる。
+* スプライトは見た目だけを持つ。位置・HP・`update()` などの動きは、利用側のクラスが持つ。
+
+### 座標と配置
+* 座標の単位は px である。基準点はワールド座標の原点 (0, 0) で、y 軸は下向きである。エディタの px は、そのままゲームの px になる。
+* 配置（位置・回転・拡大縮小）は、呼ぶ側が `ctx` の変換（`translate`・`rotate`・`scale`）で行ってから `draw` を呼ぶ。変換は `ctx.save()` と `ctx.restore()` で囲む（13章）。
+* 回転の基準となる前方の向きは、ゲームごとに決める。エディタでもその向きで描く（具体的な向きはゲームの開発資料に書く）。
+
+### 使い方の例
+シーンの `draw` の中で、自機のスプライトを位置と角度を付けて描く。
+
+```js
+import { Scene } from 'oz';
+import player from 'assets/sprites/player.js';
+
+class PlayScene extends Scene {
+  draw(ctx, layer) {
+    if (layer !== 'main') return;
+    ctx.save();
+    ctx.translate(this.x, this.y);
+    ctx.rotate(this.angle);
+    player.draw(ctx);
+    ctx.restore();
+  }
+}
+```
+
+### つなぎのスプライト
+エディタで描けない絵を手で書く場合も、既定の export で `draw(ctx)` を持つ形（`export default { draw }`）にする。`format` などのデータのキーは持たなくてよい。手で書いてよい条件は、プロジェクトの憲法に従う。
+
+### 組み立て用のJS
+名前の頭に `_` を付けたJS（例 `_hero.js`）は、パーツのスプライトJSを組み立てる。スプライトJSは外部依存のない1ファイルとするが、組み立て用のJSは例外として、同じ `assets/sprites/` にあるパーツのスプライトJSを相対パス（`./body.js` など）で `import` してよい。エンジン（`oz`）・`js/`・`assets/sprites/` の外のファイルは `import` しない。
+
+* 既定の export で `draw(ctx)` を持つ点は同じである。配置は `ctx` の変換で行う。
+* エディタのアニメーションの機能で書き出す想定で、現時点では存在せず、エンジンにも専用の読み込みはない。
+* 時間の引数（`draw(ctx, t)` など）を足すかどうかは、そのときに決める。
+
+### 形式の記載箇所
+スプライトJSの形式（既定の export に入るデータのキー、`draw` の中身など）は、OZ Vector Editor のリポジトリ（ローカル `D:\ozlab\ozvectoreditor`）の `PROJECT_ARCHITECTURE.md` 2章「スプライト（書き出し形式）」にだけ書かれている。本章は形式を書き写さず、エンジンを使う側の約束だけを書く。エディタ側の使い方の例も同じ項にある。
