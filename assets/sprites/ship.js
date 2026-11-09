@@ -1,19 +1,14 @@
 /**
  * 責務: 機体の見た目（白い多角形と2つの円）を描画する手書きのスプライト。
- * 位置や動きは持たない。外部に依存しない。
+ * 位置や動きは持たない。外部に依存しない。既定のexportだけを持つ（エディタの書き出し形式に合わせる）。
  */
-
-/** スプライトJSの形式の版 */
-export const format = 1;
 
 /**
- * 機体を原点 (0, 0)、前方 +X で描く。ctx の状態は元に戻す。
+ * 機体を原点 (0, 0)、前方 +X で描く。ctx の現在の変換の上に描き、ctx の状態は元に戻す。
  * @param {CanvasRenderingContext2D} ctx 描画先
- * @param {number} [t=0] 予約引数（未使用）
- * @param {object} [opts={}] 予約引数（未使用）
  * @returns {void}
  */
-export function draw(ctx, t = 0, opts = {}) {
+function draw(ctx) {
   ctx.save();
   ctx.fillStyle = '#ffffff';
   ctx.beginPath();
@@ -31,3 +26,9 @@ export function draw(ctx, t = 0, opts = {}) {
   ctx.fill();
   ctx.restore();
 }
+
+/**
+ * スプライトの既定のexport。描画関数 draw(ctx) だけを持つ。
+ * @type {{draw: function(CanvasRenderingContext2D): void}}
+ */
+export default { draw };

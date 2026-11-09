@@ -3,7 +3,7 @@
  */
 /* ozengine sample */
 import { Scene } from 'oz';
-import * as shipSprite from 'assets/sprites/ship.js';
+import shipSprite from 'assets/sprites/ship.js';
 import { Ship } from '../entities/Ship.js';
 import { Stars } from '../effect/Stars.js';
 import { Trail } from '../effect/Trail.js';
