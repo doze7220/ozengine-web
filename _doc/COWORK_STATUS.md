@@ -11,7 +11,7 @@
 ---
 
 ### 1. プロジェクト現況スナップショット（最終更新：2026-11-09）
-* Phase 02 クローズ済み。Phase 03 未着手。Phase 03 のDIR策定の前に `_doc/PROJECT_PHASE_TRANSITION_CLEANUP.md` の棚卸しを行う（Phase 02 の DIR・REQ・RES はまだ `closed/` へ移していない）。
+* Phase 02 クローズ済み。Phase 02 の DIR・REQ・RES は `closed/` へ移した（棚卸し済み）。Phase 03 は DIR 策定中。
 
 ---
 
