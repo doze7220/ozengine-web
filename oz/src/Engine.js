@@ -11,6 +11,7 @@ import { Layers } from './Layers.js';
 import { DebugOverlay } from './DebugOverlay.js';
 import { Input } from './Input.js';
 import { Buttons } from './Buttons.js';
+import { Keys } from './Keys.js';
 
 /** tickRate を省略したときの既定値。 */
 const DEFAULT_TICK_RATE = 60;
@@ -23,6 +24,8 @@ let scenes = null;
 let input = null;
 /** @type {Buttons|null} 起動後の Buttons。起動前は null */
 let buttons = null;
+/** @type {Keys|null} 起動後の Keys。起動前は null */
+let keys = null;
 
 /**
  * 正の有限数かを判定する。
@@ -115,7 +118,8 @@ export const Engine = {
     const newScenes = new Scenes();
     const layers = new Layers(config.layers);
     const newButtons = new Buttons();
-    const newInput = new Input({ canvas: config.canvas, screen, scenes: newScenes, buttons: newButtons });
+    const newKeys = new Keys();
+    const newInput = new Input({ canvas: config.canvas, screen, scenes: newScenes, buttons: newButtons, keys: newKeys });
     const overlay = Boolean(config.debug) ? new DebugOverlay() : null;
     const loop = new GameLoop({ ctx, time: newTime, scenes: newScenes, layers, input: newInput, overlay });
 
@@ -123,6 +127,7 @@ export const Engine = {
     scenes = newScenes;
     buttons = newButtons;
     input = newInput;
+    keys = newKeys;
     newScenes.push(config.scene);
     loop.start();
   },
@@ -224,9 +229,9 @@ export const Engine = {
    * @throws {Error} 起動前の場合
    */
   isKeyDown(code) {
-    if (input === null) {
+    if (keys === null) {
       throw new Error('[oz] Engine.isKeyDown: Engine.start の前には使えません');
     }
-    return input.isKeyDown(code);
+    return keys.isDown(code);
   },
 };

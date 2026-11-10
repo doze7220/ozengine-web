@@ -1,6 +1,6 @@
 /**
- * @fileoverview 責務: ポインタとキーボードの受信、論理座標への変換、押下状態の管理、フレームごとの確定、ボタン → 最前面のシーンの順の配信を担う。
- * キー割り当てなどのゲーム固有の分岐、ボタンの描画、時間の取得は行わない。
+ * @fileoverview 責務: ポインタとキーボードの受信、論理座標への変換、キーの確定の呼び出し、ボタン → 最前面のシーンの順の配信を担う。
+ * キー割り当てなどのゲーム固有の分岐、キーの確定の中身、ボタンの描画、時間の取得は行わない。
  */
 
 /**
@@ -10,6 +10,7 @@
  * @property {number} [x] kind が 'pointer' のときの論理X座標。
  * @property {number} [y] kind が 'pointer' のときの論理Y座標。
  * @property {string} [code] kind が 'keydown' / 'keyup' のときの KeyboardEvent.code。
+ * @property {'keyboard'} [source] kind が 'keydown' / 'keyup' のときの入力元。
  */
 
 /**
@@ -24,6 +25,8 @@ export class Input {
   #scenes;
   /** @type {{find: (scene: object, x: number, y: number) => {onPress: () => void} | null}} */
   #buttons;
+  /** @type {{confirm: (events: QueuedEvent[]) => QueuedEvent[]}} */
+  #keys;
 
   /** @type {QueuedEvent[]} 受信したイベント（届いた順） */
   #queue = [];
@@ -35,10 +38,6 @@ export class Input {
   #lastY = 0;
   /** @type {boolean} ボタンが消費した押下の最中か */
   #consumed = false;
-  /** @type {Set<string>} 押している状態のキー */
-  #keysDown = new Set();
-  /** @type {Set<string>} 次のフレームの確定で外すキー */
-  #releaseNext = new Set();
 
   /**
    * 入力のイベントを登録する。解除の処理は持たない。
@@ -47,12 +46,14 @@ export class Input {
    * @param {{toLogical: (clientX: number, clientY: number) => {x: number, y: number}}} deps.screen 座標変換を行う Screen。
    * @param {{top: {onPointer: Function, onKeyDown: Function} | null}} deps.scenes 最前面のシーンを返す Scenes。
    * @param {{find: (scene: object, x: number, y: number) => {onPress: () => void} | null}} deps.buttons ボタンの当たり判定を行う Buttons。
+   * @param {{confirm: (events: QueuedEvent[]) => QueuedEvent[]}} deps.keys キーの確定を行う Keys。
    */
-  constructor({ canvas, screen, scenes, buttons }) {
+  constructor({ canvas, screen, scenes, buttons, keys }) {
     this.#canvas = canvas;
     this.#screen = screen;
     this.#scenes = scenes;
     this.#buttons = buttons;
+    this.#keys = keys;
 
     canvas.style.touchAction = 'none';
     /**
@@ -73,28 +74,18 @@ export class Input {
     canvas.addEventListener('pointercancel', onPointerEnd);
     canvas.addEventListener('lostpointercapture', onPointerEnd);
     window.addEventListener('keydown', (e) => this.#onKeyDownEvent(e));
-    window.addEventListener('keyup', (e) => this.#queue.push({ kind: 'keyup', code: e.code }));
+    window.addEventListener('keyup', (e) => this.#queue.push({ kind: 'keyup', code: e.code, source: 'keyboard' }));
     window.addEventListener('blur', () => this.#queue.push({ kind: 'blur' }));
   }
 
   /**
-   * 溜めた入力を取り出し、キーの状態を確定してから、届いた順に配る。GameLoop が毎フレーム1回呼ぶ。
+   * 溜めた入力を取り出し、Keys にキーの状態を確定させてから、届いた順に配る。GameLoop が毎フレーム1回呼ぶ。
    * @returns {void}
    */
   dispatch() {
     const events = this.#queue;
     this.#queue = [];
-    this.#confirmKeys(events);
-    for (const event of events) this.#deliver(event);
-  }
-
-  /**
-   * キーを押している状態かを返す。値は dispatch() の確定でだけ変わる。
-   * @param {string} code KeyboardEvent.code。
-   * @returns {boolean} 押していれば true。未知のコードや文字列以外は false。
-   */
-  isKeyDown(code) {
-    return this.#keysDown.has(code);
+    for (const event of this.#keys.confirm(events)) this.#deliver(event);
   }
 
   /**
@@ -142,7 +133,7 @@ export class Input {
    */
   #onKeyDownEvent(e) {
     if (e.repeat) return;
-    this.#queue.push({ kind: 'keydown', code: e.code });
+    this.#queue.push({ kind: 'keydown', code: e.code, source: 'keyboard' });
   }
 
   /**
@@ -159,37 +150,6 @@ export class Input {
       this.#queue[this.#queue.length - 1] = event;
     } else {
       this.#queue.push(event);
-    }
-  }
-
-  /**
-   * そのフレームの全イベントについて、キーの押下状態を配信の前に一度に確定する。
-   * @param {QueuedEvent[]} events 取り出したイベント。
-   * @returns {void}
-   */
-  #confirmKeys(events) {
-    for (const code of this.#releaseNext) this.#keysDown.delete(code);
-    this.#releaseNext.clear();
-    const pressedNow = new Set();
-    /**
-     * キーを離した扱いにする。同じフレームで押されたキーは次のフレームの確定まで押下を保つ。
-     * @param {string} code KeyboardEvent.code。
-     * @returns {void}
-     */
-    const release = (code) => {
-      if (pressedNow.has(code)) this.#releaseNext.add(code);
-      else this.#keysDown.delete(code);
-    };
-    for (const event of events) {
-      if (event.kind === 'keydown') {
-        this.#keysDown.add(event.code);
-        pressedNow.add(event.code);
-        this.#releaseNext.delete(event.code);
-      } else if (event.kind === 'keyup') {
-        release(event.code);
-      } else if (event.kind === 'blur') {
-        for (const code of this.#keysDown) release(code);
-      }
     }
   }
 
