@@ -91,7 +91,7 @@ export class TitleScene extends FlightScene {
    */
   startPlay() {
     this.playBgm();
-    Engine.changeScene(new PlayScene(this.screen));
+    Engine.changeScene(new PlayScene(this.screen, () => Engine.changeScene(new TitleScene(this.screen))));
   }
 
   /**

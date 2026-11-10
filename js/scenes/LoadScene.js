@@ -3,6 +3,7 @@
  */
 /* ozengine sample */
 import { Assets, Engine, Scene } from 'oz';
+import { loadVirtualPadImages } from '../ui/virtualPadView.js';
 import { TitleScene } from './TitleScene.js';
 import { openMute } from './mute.js';
 import { drawMuteLabel, drawText } from './uiText.js';
@@ -43,7 +44,7 @@ export class LoadScene extends Scene {
    */
   init() {
     openMute();
-    Assets.load(ASSET_LIST).then(() => Engine.changeScene(new TitleScene(this.screen)));
+    Promise.all([Assets.load(ASSET_LIST), loadVirtualPadImages()]).then(() => Engine.changeScene(new TitleScene(this.screen)));
   }
 
   /**
