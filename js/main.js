@@ -5,7 +5,8 @@ import { Engine, Scene } from 'oz';
 
 /**
  * Engine.start に渡す設定。tickRate は書かない（既定の 60）。
- * @type {{canvas: HTMLCanvasElement, width: number, height: number, layers: string[], scene: Scene, debug?: boolean}}
+ * virtualPad: バーチャルパッドを使うなら true。false にすると表示も画像の読み込みもしない。
+ * @type {{canvas: HTMLCanvasElement, width: number, height: number, layers: string[], scene: Scene, debug?: boolean, virtualPad?: boolean}}
  */
 const config = {
   canvas: document.querySelector('canvas'),
@@ -13,6 +14,7 @@ const config = {
   height: 720,
   layers: ['main'],
   scene: new Scene(),
+  virtualPad: true,
 };
 
 /* ozengine sample: begin */
