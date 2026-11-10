@@ -10,7 +10,7 @@
 import { Engine, Scene, Assets, Sound, Storage } from 'oz';
 ```
 
-* `Engine` : 起動、シーンの操作、`timeScale` の読み書き、ボタンの登録、キーの状態の取得
+* `Engine` : 起動、シーンの操作、`timeScale` の読み書き、ボタンの登録、キーの状態の取得、バーチャルパッドの登録と状態の取得
 * `Scene` : シーンの基底クラス
 * `Assets` : 画像と音声のロードと取得
 * `Sound` : 音の再生と音量
@@ -58,6 +58,7 @@ import { Engine, Scene, Assets, Sound, Storage } from 'oz';
 | `scene` | 必須 | - | 最初のシーン。`Scene` のインスタンス（クラスそのものはエラー） |
 | `tickRate` | 任意 | `60` | 1秒あたりの `update` のティック数。正の有限数 |
 | `debug` | 任意 | `false` | 真なら FPS を最前面に表示する |
+| `virtualPad` | 任意 | `false` | 真ならバーチャルパッド（画面のスティックとボタン。24章）の仕組みを有効にする。真偽は `Boolean(...)` で解釈し、型の検証はしない |
 
 最小の起動例:
 
@@ -126,7 +127,7 @@ class MoveScene extends Scene {
 * 引数が `Scene` のインスタンスでないとエラーになる（スタックは変更されない）。`Engine.start` の前に呼んでもエラーになる。
 * 呼ばれる順序: `changeScene` は最前面から順に全シーンの `destroy()` を呼び、そのあと新しいシーンの `init()` を呼ぶ。`pushScene` は `init()` のみ、`popScene` は `destroy()` のみ呼ぶ。
 * 積むと、背面のシーンは `update` が止まり、`draw` は続く。戻すと背面のシーンの `update` が再開する。
-* 積むと、背面のシーンには入力（`onPointer`・`onKeyDown`）も届かず、背面のシーンのボタンも反応しない。戻すと再び届き、反応する。
+* 積むと、背面のシーンには入力（`onPointer`・`onKeyDown`）も届かず、背面のシーンのボタンも反応しない。背面のシーンのバーチャルパッド（24章）も反応しない。戻すと再び届き、反応する。
 * ポーズは専用APIではなく、ポーズ用のシーンを `pushScene` で積み、`popScene` で戻して作る。
 
 ## 7. 操作を呼んでよい場所
@@ -218,7 +219,10 @@ Engine.timeScale = 0.5; // 半分の速さ
 `onPointer(pointer)` の `pointer` は `{ type, x, y }` である。`type` は `'down'`・`'move'`・`'up'`、`x`・`y` は描画と同じ論理座標である。戻り値は使わない。
 
 * 最前面のシーンだけに届く。
-* マウス、タッチ、ペンを同じように扱う。主ポインタの主ボタンだけを扱い、マルチタッチ、右クリック、中クリックは扱わない。
+* マウス、タッチ、ペンを同じように扱う。主ボタンだけを扱い、右クリック、中クリックは扱わない。
+* `onPointer` は単一ポインタである。バーチャルパッド（24章）が処理した指を除いて、パッドの外で押しているポインタが同時に2本以上あるときは、ほかに押しているポインタが無いときに押し始めた1本だけが、離すまで届く。そのあいだに押し始めたポインタは、離すまで届かない。
+* バーチャルパッドを有効にした場合（`virtualPad`。3章）、タッチは指ごとに受け取る。パッドが処理した指（パッドのスティックやボタンの円の内側で押し始めた指）は、離すまで `onPointer` にも画面のボタン（18章）にも届かない。
+* ペンはマウスと同じ扱いで、バーチャルパッドには反応しない。
 * 押さずにマウスを動かしても `'move'` が届く。連続した `'move'` は1フレームに1つにまとめられることがある。
 * 押したまま canvas の外へ出ても `'up'` が届く。このとき `x`・`y` は論理解像度の範囲外の値になることがある。
 * 押下の中断も `'up'` として届く。
@@ -252,7 +256,8 @@ class DragScene extends Scene {
 * `Engine.isKeyDown(code)` は押している間 `true` を返す。どのメソッドの中からでも呼べる（`Engine.start` の前はエラー）。値は入力を確定するときだけ変わり、1フレームの間は変わらない。
 * 押してから離すまでが1フレームより短くても、`onKeyDown` は必ず呼ばれ、そのフレームの間は `isKeyDown` が `true` になり、次のフレームで `false` になる。
 * `isKeyDown` は実時間のフレーム単位で変わるため、`timeScale` が小さいときは、ティックの間に押して離したキーが `update` から見えないことがある。取りこぼしたくない操作は `onKeyDown` を使う。
-* ウィンドウからフォーカスが外れると、押している状態はすべて解除される。
+* バーチャルパッド（24章）を有効にしている場合、パッドが押しているキーも、キーボードのキーと同じように `isKeyDown`・`onKeyDown` に現れる。キーボードとパッドで同じキーを押しているときは、`onKeyDown` は先に押した側の1回だけ呼ばれ、片方を離してももう片方が押していれば押したままになる。
+* ウィンドウからフォーカスが外れると、押している状態はすべて解除される（パッドのキーも解除される）。詳しくは24章。
 * ブラウザの既定の動作（F5、F12 など）は止めない。
 
 ```js
@@ -282,6 +287,7 @@ class PlayerScene extends Scene {
 
 * 不正な引数はエラーになる。`Engine.start` の前に呼んでもエラーになる。
 * `init` の中で登録する（最初のシーンの `init` でも使える）。constructor の中では、`Engine.start` の前に作るシーンで使えない。
+* バーチャルパッド（24章）が処理した指は、画面のボタンに届かない。
 * ポインタの `'down'` の位置が矩形の内側なら `onPress()` が呼ばれる。その押下は、離すまでの `'move'`・`'up'` も含めて、シーンの `onPointer` に届かない。`onPress` の中でシーンが変わっても、新しいシーンにも届かない。
 * 左端と上端を含み、右端と下端を含まない。重なっている場合は、後に登録したものだけが反応する。
 * 反応するのは最前面のシーンのボタンだけである。背面になると反応せず、戻ると再び反応する。スタックから外れたシーンのボタンは反応しない。
@@ -315,6 +321,8 @@ class MenuScene extends Scene {
 * 入力は `timeScale` に関係なく毎フレーム1回、`update` の前に届く。`timeScale` が `0` の間も届き、スロー中も遅れない。
 * `onPointer`・`onKeyDown`・`onPress` は、`draw` の中やブラウザのイベントの中からは呼ばれない。
 * 1フレームの順序: 時間を進める → 届いた順に入力を配る → `update` を0回以上 → `draw`。
+* 入力を配る始めに、溜まったタッチの指を、そのときの最前面のシーンのバーチャルパッド（24章）へ振り分ける。パッドが処理した指は `onPointer` にも画面のボタンにも届かない。同じフレームの中でシーンが変わっても、振り分けは配る始めの最前面のシーンで行う。
+* パッドのキー（`onKeyDown`・`isKeyDown` に現れるもの）は、その指のイベントがあった位置で、ほかの入力と届いた順を保って届く。
 * ポインタはボタン → 最前面のシーンの順に、キーは最前面のシーンに届く。
 
 ## 20. アセット
@@ -589,3 +597,171 @@ class PlayScene extends Scene {
 
 ### 形式の記載箇所
 スプライトJSの形式（既定の export に入るデータのキー、`draw` の中身など）は、OZ Vector Editor のリポジトリ（ローカル `D:\ozlab\ozvectoreditor`）の `PROJECT_ARCHITECTURE.md` 2章「スプライト（書き出し形式）」にだけ書かれている。本章は形式を書き写さず、エンジンを使う側の約束だけを書く。エディタ側の使い方の例も同じ項にある。
+
+## 24. バーチャルパッド
+
+バーチャルパッドは、画面に出すスティックとボタン（スマートフォンなどのタッチ操作用）である。指の位置をキーの押下（`KeyboardEvent.code`）に変えるので、ゲームはキーボードと同じ `Engine.isKeyDown`・`onKeyDown` で受け取れる。画面の `Engine.addButton`（18章）のボタンと区別するため、ここでは「パッドのスティック」「パッドのボタン」と呼ぶ。
+
+* エンジンは当たり判定、押下状態、キーへの変換、つまみの位置を持つ。**画像の読み込みと描画はしない**。見た目は利用側が `Engine.virtualPadState` を読んで描く。
+* 配置（位置と大きさ）、キーの割り当て、遊びの大きさの既定値はエンジンに無い。すべて `Engine.addVirtualPad` の引数で渡す。
+
+### 有効・無効
+
+`Engine.start` の `virtualPad`（3章）で切り替える。既定は無効である。
+
+| API | 内容 |
+| --- | --- |
+| `Engine.addVirtualPad(scene, layout)` | シーンにパッドを登録する。`init` の中で呼ぶ（`Engine.addButton` と同じ） |
+| `Engine.virtualPadEnabled` | 読み取りのみ。起動設定で有効なら `true` |
+| `Engine.virtualPadTouched` | 読み取りのみ。有効で、canvas の上を指で触れたことがあれば `true`。無効のときは常に `false` |
+| `Engine.virtualPadState(scene)` | シーンのパッドの描画用の状態の写し（毎回新しいオブジェクト）。無効のとき、または登録していないシーンでは `null` |
+
+* 4つとも `Engine.start` の前に使うとエラー（`[oz] <API名>: Engine.start の前には使えません`）。`scene` が `Scene` のインスタンスでないとエラー。
+* 無効のとき、`Engine.addVirtualPad` は引数の検証だけを行い、何も登録しない。無効のときの `onPointer` とキーの動作は、バーチャルパッドの無いときと同じである。
+* 有効のとき、同じシーンに2回登録するとエラー。
+
+### `layout`（`Engine.addVirtualPad` の第2引数）
+
+| 項目 | 必須 | 内容 |
+| --- | --- | --- |
+| `stick` | 任意 | スティック。`{ x, y, radius, deadZone, keys }` |
+| `stick.x`・`stick.y` | 必須 | 中心の論理座標。有限の数値 |
+| `stick.radius` | 必須 | 半径。正の有限数。当たり判定の円であり、つまみが動ける範囲でもある |
+| `stick.deadZone` | 必須 | 遊びの大きさ。`radius` に対する割合で、`0` 以上 `1` 未満の有限の数値 |
+| `stick.keys` | 必須 | `{ left, right, up, down }` のうち、使う方向だけを書いたオブジェクト（空でもよい）。値は空でない文字列（`KeyboardEvent.code`） |
+| `buttons` | 任意 | ボタンの配列（空でもよい）。各要素は `{ x, y, radius, key }` |
+| `buttons[i].x`・`y` | 必須 | 中心の論理座標。有限の数値 |
+| `buttons[i].radius` | 必須 | 半径。正の有限数 |
+| `buttons[i].key` | 必須 | 空でない文字列（`KeyboardEvent.code`） |
+
+* `layout`・`stick`・`stick.keys`・`buttons` の各要素に、表にない項目があるとエラー（書き間違いを見つけるため。画像のファイル名などは別のオブジェクトに書く）。
+* `stick` が無く、`buttons` も無いか空だとエラー。`stick` に `null` を書くとエラー（省略するときは項目ごと書かない）。
+* エラーは `Error` で、先頭が `[oz] Engine.addVirtualPad:`、項目名を含む（例 `stick.radius は正の有限数で指定してください`、`buttons[0].key は空でない文字列で指定してください`、`stick.keys に使えない項目 Left があります`）。
+* 値はコピーして持つ。登録後に元のオブジェクトを変えても影響しない。
+
+### 反応する条件と指の扱い
+
+パッドが反応するのは、次のすべてを満たすときである。
+
+* 起動設定で有効である。
+* 指で触れたことがある（`Engine.virtualPadTouched` が `true`。最初の指の押し始めを処理するときに立つので、その指からパッドが反応する）。マウスとキーボードだけの環境では `false` のまま、パッドは反応しない。
+* 入力を配る始めの最前面のシーンに、パッドが登録されている（積んだシーンの背面や、登録していないシーンでは反応しない）。
+* 指のタッチである。ペンとマウスはパッドに反応せず、`onPointer` に届く。
+* 押し始めた位置が、パッドのスティックかボタンの円の内側（縁を含む）である。
+
+指の扱い:
+
+* パッドのボタンは、指を離すまで押したままである（指がボタンの円の外へ出ても押したまま）。同じボタンを複数の指で押したときは、全部の指を離すまで押したまま。ほかの場所で押し始めた指が上を通っても押さない。重なっているボタンは、後に登録したものが優先する。
+* パッドのスティックは1本の指だけが操作する。すでに操作している指がある間に、スティックの円の内側で押し始めた2本目の指は、何も押さずに離すまで持たれる（パッドが処理した指として `onPointer` にも画面のボタンにも届かない）。
+* パッドが処理した指は、離すまで `onPointer` にも画面のボタンにも届かない。パッドの外で押し始めた指は、パッドに反応せず、`onPointer` などに届く（16章）。
+* 反応するパッドでなくなったとき（メニューのシーンを積んだときなど）は、次の節の扱いになる。
+
+### スティックの方向の判定
+
+スティックを操作している指の位置から中心を引いた `(dx, dy)` と、その長さ `dist` で判定する。指が円の外へ出ても、そのまま使う。
+
+* `dist < deadZone * radius` のあいだは、どの方向も押さない（遊び）。
+* それ以外は、8方向を45度ずつに分けて判定する。斜めでは2つの方向が同時に押される（左上なら `left` と `up` のキー）。
+* `stick.keys` に割り当てのない方向は、何も押さない。
+
+### キーとの関係
+
+* パッドが押しているキーは、キーボードのキーと同じく `Engine.isKeyDown(code)` が `true` になり、押した瞬間に `onKeyDown(code)` が呼ばれる（17章）。
+* キーボードとパッドで同じキーを押したときは、`onKeyDown` は先に押した側の1回だけ呼ばれる。片方を離しても、もう片方が押していれば押したままである。
+* **最前面のシーンが変わったとき:** 反応するパッドでなくなると、次に入力を配る始めに、そのパッドが押していたキーは離した扱いになる。そのとき触れていた指は、離すまでどこにも届かず、何も押さない。メニューを閉じても、その指では押されない（指を離して押し直す）。キーボードのキーは影響を受けず、押したまま残る。
+* **フォーカスが外れたとき:** ウィンドウからフォーカスが外れると、パッドのキーもキーボードのキーも解除され、触れていた指は離すまで何も押さない。
+* ゲームのロジックの入力には、キー（`Engine.isKeyDown`・`onKeyDown`）を使うこと。倒し具合を読む API は無い。
+
+### 表示の条件と状態の読み方
+
+`Engine.virtualPadState(scene)` は、次の形のオブジェクトを返す。
+
+```text
+{
+  visible: boolean,        // 表示してよいか（= Engine.virtualPadTouched）
+  stick: {                 // layout に stick が無ければ null
+    x, y, radius,          // 登録した値
+    knobX, knobY,          // つまみの中心（論理座標）。指が無ければ (x, y)
+    active: boolean,       // 指で操作しているか
+  } | null,
+  buttons: [               // layout.buttons と同じ順。無ければ空の配列
+    { x, y, radius, key, pressed: boolean },
+  ],
+}
+```
+
+* `visible` が偽のあいだは何も描かない。指で触れるまでは偽、触れた後は、ページを開いている間ずっと真である。マウスとキーボードだけの環境では偽のままである。
+* 値は入力を確定するとき（毎フレームの配信の始め）にだけ変わり、1フレームの間は変わらない。`draw` から呼んでよい（読み取りのみ）。
+* `knobX`・`knobY` は、指の位置が円の内側（`dist <= radius`）ならその位置、外なら中心から半径 `radius` の円の中へ縮めた位置である。描画のための値であり、ゲームのロジックの入力には使わない（キーを使う）。
+* つまみの絵の大きさはエンジンが知らない。絵が土台の円の外へ出ないように、利用側が `knobX`・`knobY` を、中心から半径 `radius - knobRadius`（`knobRadius` はつまみの絵の半径）の円の中に収めて描く。
+
+### 描き方の例
+
+画像は `Assets.load` で読み込み（20章）、シーンの `init` で登録し、`draw` で `Engine.virtualPadState` から描く。ファイル名と値は例である。押している間の見た目は、別の画像にして切り替えると、ファイルの差し替えだけで変えられる。
+
+```js
+const LAYOUT = {
+  stick: { x: 200, y: 530, radius: 130, deadZone: 0.25, keys: { left: 'ArrowLeft', right: 'ArrowRight' } },
+  buttons: [{ x: 1090, y: 550, radius: 100, key: 'Space' }],
+};
+const KNOB_RADIUS = 56;
+
+// ロード用のシーンなどで。無効のときは読み込まなくてよい。
+function loadPadImages() {
+  if (!Engine.virtualPadEnabled) return Promise.resolve();
+  return Assets.load({
+    images: {
+      'pad:base': './assets/images/pad/stick_base.svg',
+      'pad:knob': './assets/images/pad/stick_knob.svg',
+      'pad:button': './assets/images/pad/button.svg',
+      'pad:button:pressed': './assets/images/pad/button_pressed.svg',
+    },
+  });
+}
+
+class PlayScene extends Scene {
+  init() {
+    Engine.addVirtualPad(this, LAYOUT);
+  }
+
+  update(dt) {
+    if (Engine.isKeyDown('ArrowLeft')) this.x -= dt * 0.1; // パッドの左もここに届く
+  }
+
+  draw(ctx, layer) {
+    if (layer !== 'ui') return;
+    const pad = Engine.virtualPadState(this);
+    if (pad === null || !pad.visible) return;
+
+    if (pad.stick) {
+      const { x, y, radius, knobX, knobY } = pad.stick;
+      ctx.drawImage(Assets.image('pad:base'), x - radius, y - radius, radius * 2, radius * 2);
+      // つまみは、中心から radius - KNOB_RADIUS の円の中に収める
+      const limit = radius - KNOB_RADIUS;
+      let ox = knobX - x;
+      let oy = knobY - y;
+      const len = Math.hypot(ox, oy);
+      if (limit <= 0) {
+        ox = 0;
+        oy = 0;
+      } else if (len > limit) {
+        ox *= limit / len;
+        oy *= limit / len;
+      }
+      ctx.drawImage(Assets.image('pad:knob'), x + ox - KNOB_RADIUS, y + oy - KNOB_RADIUS, KNOB_RADIUS * 2, KNOB_RADIUS * 2);
+    }
+    for (const b of pad.buttons) {
+      const image = Assets.image(b.pressed ? 'pad:button:pressed' : 'pad:button');
+      ctx.drawImage(image, b.x - b.radius, b.y - b.radius, b.radius * 2, b.radius * 2);
+    }
+  }
+}
+```
+
+* `drawImage` だけを使う場合は `ctx` の状態を変えないので `save` / `restore` は不要である。透明度や変形を変えるときは `save` / `restore` で囲む（13章）。
+
+### エラー
+
+* `Engine.start` の前に、4つの操作のどれかを使うとエラー（`[oz] <API名>: Engine.start の前には使えません`）。
+* `Engine.addVirtualPad` で、`scene` が `Scene` のインスタンスでない、`layout` が正しくない（`[oz] Engine.addVirtualPad:` で始まり、項目名を含む）、有効なときに同じシーンへ2回登録した、場合はエラー。
+* `Engine.virtualPadState` で、`scene` が `Scene` のインスタンスでないとエラー。
