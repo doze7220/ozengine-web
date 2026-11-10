@@ -35,8 +35,8 @@ export class VirtualPads {
   #touched = false;
   /** @type {Map<number, PadLike>} パッドが持っている指（pointerId）とそのパッド */
   #owners = new Map();
-  /** @type {Map<PadLike, Set<string>>} パッドごとの、前回までに差し込んだ押下キーの集合 */
-  #held = new Map();
+  /** @type {WeakMap<PadLike, Set<string>>} パッドごとの、前回までに差し込んだ押下キーの集合 */
+  #held = new WeakMap();
 
   /**
    * シーンにパッドを登録する。検証はしない。
