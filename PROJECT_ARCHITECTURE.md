@@ -22,11 +22,12 @@ ozengine-web/
 ├── js/                     # アプリのコード（ゲームの土台）
 │   ├── main.js
 │   ├── scenes/
+│   ├── ui/                 # バーチャルパッドの定義と描画
 │   ├── effect/
 │   └── entities/
 ├── assets/                 # 素材
 │   ├── sprites/
-│   ├── images/
+│   ├── images/             # `vpad/` はバーチャルパッドの既定の画像
 │   └── sounds/
 ├── test/                   # 自動テスト（`node --test` でのみ実行。`oz/` の外に置き、新規プロジェクトにはコピーしない）
 ├── _doc/
@@ -66,6 +67,7 @@ ozengine-web/
 | `tickRate` | 任意。固定ティック数（1秒あたり。既定は 60） |
 | `scene` | 必須。最初のシーン |
 | `debug` | 任意。デバッグ表示の有無（既定は無効） |
+| `virtualPad` | 任意。真ならバーチャルパッドを使う（既定は無効） |
 
 #### 2.3 シーン（`Scene` の派生クラス）
 | メソッド | 呼ばれるタイミング |
@@ -95,7 +97,7 @@ phaseout の3系統を引き継ぐ。単位はすべてミリ秒。
 1フレームの処理順序は次のとおりで、変更してはならない。
 
 1. `Time` が `realDelta` を計算し、`realDelta × timeScale` を蓄積する（1フレームの上限は5ティック分）。`gameTime` にも同じ量（同じ上限）を足す。
-2. `Input` が、ブラウザから受け取って溜めておいた入力を確定し、届いた順に配る。`timeScale` に関係なく毎フレーム1回行う。ポインタはボタン → 最前面のシーンの順で、ボタンが消費したらシーンへ届かない。キーは最前面のシーンへ届く。
+2. `Input` が、ブラウザから受け取って溜めておいた入力を、タッチの指のパッドへの振り分け（`VirtualPads`。配信の始めの最前面のシーンのパッド）→ キーの確定（`Keys`。キーボードとパッドをまとめる）→ 届いた順の配信、の順に処理する。`timeScale` に関係なく毎フレーム1回行う。ポインタは単一ポインタに絞ってから、ボタン → 最前面のシーンの順で、ボタンが消費したらシーンへ届かない。キーは最前面のシーンへ届く。
 3. 蓄積がティック長に達している間、`Scenes` が最前面のシーンの `update(dt)` を呼ぶ（固定ティック）。
 4. `Layers` がキャンバスを消去し、レイヤーを奥から順に走査して、`Scenes` 経由で各シーンの `draw(ctx, layer, time)` を呼ぶ。
 5. `debug` が有効なら、`DebugOverlay` が最前面に描画する。
@@ -110,15 +112,15 @@ phaseout の3系統を引き継ぐ。単位はすべてミリ秒。
 * **音声の自動再生制限:** 入力の配信はフレームの中なので、そこからは自動再生制限を解除できない。`Sound` は自分で `window` に `pointerdown`・`pointerup`・`keydown` を capture で登録し、そのイベントの中で直接 `AudioContext.resume()` を呼ぶ（`Input` を経由しない）。イベントの中では `resume()` の呼び出しと入力の記録だけを行い、シーンの処理を呼ばない。`Escape` の `keydown` は入力に数えない。入力があり AudioContext が `running` になったら登録を解除する。最初の入力より前の再生の要求は捨てる。
 * **音の時刻:** フェードと停止の予定には `AudioContext.currentTime` を使う。これは憲法3章「時間の受け渡し」に明記された例外である。音は `timeScale` と無関係に実時間で進む。
 
-`Engine` が各モジュールを生成する。`Time`・`Scenes`・`Layers`・`Input`・`DebugOverlay` のインスタンスを `GameLoop` へ、`Screen`・`Scenes`・`Buttons` のインスタンスを `Input` へ引数で渡すので、`GameLoop` と `Input` はこれらを import しない。`Scenes` と `Layers` も互いを import しない。
+`Engine` が各モジュールを生成する。`Time`・`Scenes`・`Layers`・`Input`・`DebugOverlay` のインスタンスを `GameLoop` へ、`Screen`・`Scenes`・`Buttons` のインスタンスに加え、`Keys`・`VirtualPads` を `Input` へ、`VirtualPad` を `VirtualPads` へ引数で渡すので、`GameLoop` と `Input` と `VirtualPads` はこれらを import しない。`Scenes` と `Layers` も互いを import しない。
 
 依存の向きは次のとおりで、逆向きの import を禁止する。
 
 ```
 利用側の js/ → oz/index.js → Engine / Scene / Assets / Sound / Storage
-Engine → Scene / GameLoop / Time / Screen / Scenes / Layers / Input / Buttons / DebugOverlay
+Engine → Scene / GameLoop / Time / Screen / Scenes / Layers / Input / Buttons / Keys / VirtualPad / VirtualPads / DebugOverlay
 
-Scene・GameLoop・Time・Screen・Scenes・Layers・Input・Buttons・DebugOverlay・Sound・Storage は他のエンジンモジュールに依存しない。
+Scene・GameLoop・Time・Screen・Scenes・Layers・Input・Buttons・Keys・VirtualPad・VirtualPads・DebugOverlay・Sound・Storage は他のエンジンモジュールに依存しない。
 例外: Assets → Sound（音声のデコードと、名前で預けるため）。
 ```
 
@@ -132,21 +134,25 @@ Scene・GameLoop・Time・Screen・Scenes・Layers・Input・Buttons・DebugOver
 | モジュール | 書いてよいこと | 書いたら責務違反になること |
 | --- | --- | --- |
 | **index.js**（`oz/` 直下） | 公開APIの再export | 処理そのもの |
-| **Engine** | 起動設定の受け取りと各モジュールの初期化、公開操作（シーン操作、`timeScale`、ボタンの登録、キーの状態の取得）の各モジュールへの委譲 | ゲームループの中身、描画処理 |
+| **Engine** | 起動設定の受け取りと各モジュールの初期化、公開操作（シーン操作、`timeScale`、ボタンの登録、バーチャルパッドの登録と状態の取得、キーの状態の取得）の各モジュールへの委譲 | ゲームループの中身、描画処理 |
 | **GameLoop** | `requestAnimationFrame` の管理、3章の順序の呼び出し | 時間計算の詳細、ゲーム固有の処理 |
 | **Time** | `realDelta`・`gameTime`・`timeScale` の管理、固定ティックの蓄積 | 入力、描画 |
 | **Screen** | 論理解像度の設定、スクリーン座標と論理座標の変換、Canvas の表示サイズの調整（縦横比を保ってウィンドウに合わせる） | 描画、入力の配信 |
 | **Layers** | レイヤー順の走査、消去、呼び出しごとの `save` / `restore` | レイヤー名の固定値、ゲーム固有の描画 |
 | **Scene** | シーンの基底クラス（2.3章のインターフェース） | 共通のゲーム処理 |
 | **Scenes** | シーンスタックの管理（切り替え、積む、戻す）、シーン操作があったことの通知（`GameLoop` が参照する）、最前面のシーンの参照 | 遷移演出、BGMの操作 |
-| **Input** | ポインタとキーボードの受信、論理座標への変換、押下状態の管理、フレームごとの確定、優先順の配信 | キー割り当ての固定値、ゲーム固有の分岐 |
+| **Input** | ポインタ（タッチは指ごと）とキーボードの受信、論理座標への変換、canvas のタッチ向けの設定、振り分け → 確定 → 配信の流れ、単一ポインタの選び出し、優先順の配信 | キー割り当ての固定値、ゲーム固有の分岐、パッドの当たり判定、キーの確定の中身 |
+| **Keys** | キーボードとパッドの入力元をまとめたキーの押下状態の確定、押した瞬間の判定 | イベントの受信、配信 |
+| **VirtualPad** | 1つのパッドの配置の検証、当たり判定、指ごとの押下状態、キーへの変換、つまみの位置、描画用の状態の写し | 描画、画像の読み込み、配置やキー割り当ての既定値、`window` への依存 |
+| **VirtualPads** | シーンごとのパッドの登録、指で触れたかの記録、最前面のシーンのパッドへのタッチの振り分け、パッドのキーの変化を入力の列に差し込むこと | 当たり判定の中身、キーの確定、配信 |
 | **Buttons** | シーンごとのボタン矩形の登録と当たり判定 | ボタンの描画、タブやスクロールなどのUI部品 |
 | **Assets** | 一覧に基づく画像と音声のロード、取得、読み込みに失敗したときの代替（透明な画像、警告） | スプライトJSの読み込み（`import` で行う）、キャッシュ生成、音の再生 |
 | **Sound** | AudioContext の管理（入力での再開を含む）、音声のデコードと名前での保持、SEとBGMの再生、フェード、音量 | BGMの状態遷移（ピンチなどの判定はゲーム側）、ファイルの読み込み |
 | **Storage** | 単一JSONの保存と読み込み、版番号が違うときの既定値への初期化、`localStorage` が使えないときのメモリ上での継続 | セーブ内容の定義、移行処理 |
 | **DebugOverlay** | FPSの計算と表示 | ゲーム状態の参照 |
-| **js/main.js** | `Engine.start` に渡す設定（解像度、レイヤー、最初のシーン、`debug` など）の用意と `Engine.start` の呼び出し | ゲームロジック、描画処理 |
-| **js/scenes/** | シーンごとの進行と、`effect/`・`entities/` の呼び出し、`ui` レイヤーの画面構成（文字、画像、ボタン、暗幕）、スプライトの配置（位置と回転の設定と `draw` の呼び出し）。タイトルとプレイの共通処理（`FlightScene`）、ミュートの保存と反映（`mute.js`）、文字の共通処理（`uiText.js`）もここに置く | 細かい動きや描画の実装（機体の動き、星・トレイル・風の描画） |
+| **js/main.js** | `Engine.start` に渡す設定（解像度、レイヤー、最初のシーン、`debug`、`virtualPad` など）の用意と `Engine.start` の呼び出し | ゲームロジック、描画処理 |
+| **js/scenes/** | シーンごとの進行と、`effect/`・`entities/` の呼び出し、`ui` レイヤーの画面構成（文字、画像、ボタン、暗幕）、スプライトの配置（位置と回転の設定と `draw` の呼び出し）。タイトルとプレイの共通処理（`FlightScene`）、ミュートの保存と反映（`mute.js`）、文字の共通処理（`uiText.js`）、メニューの仕組み（`MenuScene`）、土台のメニューの項目（`playMenu.js`）、スローの切り替え（`slow.js`）もここに置く | 細かい動きや描画の実装（機体の動き、星・トレイル・風の描画） |
+| **js/ui/** | バーチャルパッドの定義（配置、キーの割り当て、画像のファイル名）、画像の読み込みと描画 | ゲーム進行、目印の付いたコードの import |
 | **js/effect/** | 星、トレイルなどの演出の更新と描画 | ゲーム進行に影響する処理 |
 | **js/entities/** | 位置や状態の保持、動きの更新、自動操縦 | 描画命令の直書き（描画はスプライトや `effect/` に任せる） |
 | **assets/sprites/*.js** | 見た目の描画（`oz/ENGINE_API.md` 23章の約束）。現在の `ship.js` は手書きのつなぎのスプライトで、エディタの P5（塗り）の後に、エディタの書き出しファイルに差し替える | 位置や動き、外部への依存（組み立て用のJSがパーツのスプライトJSを `import` することを除く） |
@@ -159,7 +165,7 @@ Scene・GameLoop・Time・Screen・Scenes・Layers・Input・Buttons・DebugOver
 * **置き場所と命名:** `test/<対象モジュール名>[.<観点>].test.js`（対象がモジュールでない場合は、対象のファイルの名前を使う。指紋一覧は `test/FINGERPRINTS.test.js`）。`test/` にはテスト以外の `.js`（共有の補助モジュールを含む）を置かず、補助関数は各テストファイルの中に書く。`node --test` は既定のパターンに合うファイルをすべて実行するので、そのパターンに合う名前（`*.test.js`・`*-test.js`・`*_test.js`・`test-*.js`・`test.js`）を `test/` の外のファイルに付けてはならない。
 * **import の規則:** 対象を `oz/src/` から相対パスで直接 import し、`oz/index.js` は import しない。公開されたものだけを通して確かめ、テストのためにソースを変えない。依存は `test/ → oz/src/` の一方向で、`oz/`・`js/`・`assets/`・`index.html` は `test/` を参照しない。指紋一覧のテストは `oz/src/` を import せず、`oz/` 以下のファイルをデータとして読む（`oz/` のパスは `import.meta.url` から求める）。
 * **偽の `window`:** テストファイル内の素のオブジェクトで作り、`globalThis.window` に置いた場合はテストの終了時に（`t.after` で）元に戻す。`window` 以外のグローバルには代入しない。`t.after` は登録した順に動くため、1つのテスト（`t`）で偽の `window` を置くのは1回だけにし、ケースを繰り返すときはサブテストに分ける。`console.warn` は `t.mock.method` で抑止する。状態を持つ `Storage` は、クエリ付きの動的 import でテストごとに読み込み直す。
-* **対象:** `Time`・`Scenes`・`Screen`・`Storage`、指紋一覧（`oz/FINGERPRINTS.txt` が `oz/` の中身と一致すること）。テストしないモジュール: `Scene`・`Input`・`Sound`・`Assets`・`Layers`・`GameLoop`・`DebugOverlay`・`Engine`・`Buttons`（`Sound` は読み込み時に `window` を使うため、対象にするときに登録の時期を検討する）。
+* **対象:** `Time`・`Scenes`・`Screen`・`Storage`・`Keys`・`VirtualPad`・`VirtualPads`（`Keys`・`VirtualPad`・`VirtualPads` は `window` を使わない）、指紋一覧（`oz/FINGERPRINTS.txt` が `oz/` の中身と一致すること）。テストしないモジュール: `Scene`・`Input`・`Sound`・`Assets`・`Layers`・`GameLoop`・`DebugOverlay`・`Engine`・`Buttons`（`Sound` は読み込み時に `window` を使うため、対象にするときに登録の時期を検討する）。
 
 **指紋一覧（`oz/FINGERPRINTS.txt`）の規則:**
 
