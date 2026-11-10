@@ -1,5 +1,6 @@
 /**
- * @fileoverview 責務: 音声バッファの保持、SE と BGM の再生、音量の管理、AudioContext の再開。
+ * @fileoverview 責務: 音声バッファの保持、SE と BGM の再生、音量の管理、
+ * AudioContext の再開（最初の入力と、ブラウザが止めたあとの入力での再開）。
  * Assets 専用の decodeSound / storeSound も本ファイルで公開する（oz/index.js からは公開しない）。
  */
 
@@ -26,6 +27,8 @@ let bgmGain = null;
 let seGain = null;
 /** 最初の入力を受け取ったか */
 let inputSeen = false;
+/** AudioContext が一度でも running になったか（いったん true になったら戻さない） */
+let wasRunning = false;
 /** @type {Map<string, AudioBuffer | null>} null はロードの失敗 */
 const buffers = new Map();
 /** 音量の値（gain.value は32bit 浮動小数なので、読み取りにはこちらを使う） */
@@ -57,19 +60,49 @@ function resumeContext() {
 
 /**
  * 入力を受け取り、かつ running なら再開用のイベントを解除する。
+ * running になったことは wasRunning にも記録する。
  * @returns {void}
  */
 function removeGestureListenersIfDone() {
-  if (inputSeen && context.state === 'running') {
-    for (const type of GESTURE_TYPES) {
-      window.removeEventListener(type, onGesture, { capture: true });
-    }
+  if (context.state === 'running') wasRunning = true;
+  if (inputSeen && context.state === 'running') removeGestureListeners();
+}
+
+/**
+ * 再開用のイベントを window に capture で登録する。登録済みなら二重にはならない。
+ * @returns {void}
+ */
+function addGestureListeners() {
+  for (const type of GESTURE_TYPES) {
+    window.addEventListener(type, onGesture, { capture: true });
   }
 }
 
-for (const type of GESTURE_TYPES) {
-  window.addEventListener(type, onGesture, { capture: true });
+/**
+ * 再開用のイベントを window から解除する。
+ * @returns {void}
+ */
+function removeGestureListeners() {
+  for (const type of GESTURE_TYPES) {
+    window.removeEventListener(type, onGesture, { capture: true });
+  }
 }
+
+/**
+ * AudioContext の statechange のハンドラ。running なら解除の条件を確認し、
+ * running でも closed でもなければ（suspended・interrupted など）再開用のイベントを登録し直す。
+ * 入力のイベントの外では resume() を呼ばない。
+ * @returns {void}
+ */
+function onStateChange() {
+  if (context.state === 'running') {
+    removeGestureListenersIfDone();
+  } else if (context.state !== 'closed') {
+    addGestureListeners();
+  }
+}
+
+addGestureListeners();
 
 /**
  * AudioContext と音量用の GainNode を作る。作れなければ例外を投げる。
@@ -90,6 +123,8 @@ function createContext() {
   se.connect(master);
   master.connect(ctx.destination);
   context = ctx;
+  ctx.addEventListener('statechange', onStateChange);
+  if (ctx.state === 'running') wasRunning = true;
   masterGain = master;
   bgmGain = bgm;
   seGain = se;
@@ -225,7 +260,8 @@ function assertVolume(value, apiName) {
  */
 export const Sound = {
   /**
-   * SE を1回鳴らす。同じ SE を重ねて鳴らせる。最初の入力より前は何もしない。
+   * SE を1回鳴らす。同じ SE を重ねて鳴らせる。最初の入力より前と、
+   * ブラウザが音を止めている間は何もしない。
    * @param {string} name Assets.load の sounds に書いた名前
    * @returns {void}
    */
@@ -233,6 +269,7 @@ export const Sound = {
     const buffer = requireSound(name, 'Sound.playSe');
     if (buffer === null) return;
     if (!inputSeen) return;
+    if (wasRunning && context.state !== 'running') return;
     const source = context.createBufferSource();
     source.buffer = buffer;
     source.connect(seGain);
