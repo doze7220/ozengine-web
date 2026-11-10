@@ -25,12 +25,16 @@ import { Engine, Scene, Assets, Sound, Storage } from 'oz';
 <html lang="ja">
 <head>
   <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
   <title>Game</title>
   <script type="importmap">
     { "imports": { "oz": "./oz/index.js", "assets/": "./assets/" } }
   </script>
   <style>
-    html, body { margin: 0; height: 100%; background: #000; overflow: hidden; }
+    html, body {
+      margin: 0; height: 100%; background: #000; overflow: hidden;
+      touch-action: none; -webkit-user-select: none; user-select: none; -webkit-touch-callout: none;
+    }
     body { display: flex; align-items: center; justify-content: center; }
     canvas { display: block; }
   </style>
@@ -44,6 +48,10 @@ import { Engine, Scene, Assets, Sound, Storage } from 'oz';
 
 * canvas の表示サイズ（`style.width` / `style.height`）はエンジンが設定する。CSS で幅と高さを指定しないこと。
 * 中央寄せと黒い余白は、上の CSS で行う。
+* `viewport` の `meta` は、スマートフォンでページが縮小表示されたり、2本の指で拡大されたりするのを止める。
+* `html, body` の `touch-action: none` は、canvas の外の黒い余白でも、拡大とスクロールを止める。
+* `user-select: none`（`-webkit-user-select: none` を含む）は、文字の選択を止める。`-webkit-touch-callout: none` は、長押しのメニューを止める。
+* canvas の上では、エンジンが同じ種類のスタイルを設定する（16章）ので、`index.html` が違っても canvas の上では効く。
 
 ## 3. `Engine.start(config)`
 
@@ -720,6 +728,8 @@ function loadPadImages() {
 }
 
 class PlayScene extends Scene {
+  x = 0;
+
   init() {
     Engine.addVirtualPad(this, LAYOUT);
   }

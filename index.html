@@ -1,14 +1,18 @@
-<!-- 責務: エンジンを起動するページ。import map、canvas、js/main.js の読み込み、中央寄せと黒い余白のCSSを定義する。 -->
+<!-- 責務: エンジンを起動するページ。import map、canvas、js/main.js の読み込み、中央寄せと黒い余白のCSS、スマートフォンでの拡大・選択の抑止を定義する。 -->
 <!DOCTYPE html>
 <html lang="ja">
 <head>
   <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
   <title>OZ Engine</title>
   <script type="importmap">
     { "imports": { "oz": "./oz/index.js", "assets/": "./assets/" } }
   </script>
   <style>
-    html, body { margin: 0; height: 100%; background: #000; overflow: hidden; }
+    html, body {
+      margin: 0; height: 100%; background: #000; overflow: hidden;
+      touch-action: none; -webkit-user-select: none; user-select: none; -webkit-touch-callout: none;
+    }
     body { display: flex; align-items: center; justify-content: center; }
     canvas { display: block; }
   </style>
