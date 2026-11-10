@@ -70,11 +70,12 @@ export class TitleScene extends FlightScene {
   }
 
   /**
-   * スタートボタンを登録する。
+   * スタートボタンを登録し、BGM を流し始める（boot 画面で最初の入力が済んでいるので、入力を待たない）。
    * @returns {void}
    */
   init() {
     Engine.addButton(this, { ...this.button, onPress: () => this.startPlay() });
+    this.playBgm();
   }
 
   /**
@@ -86,11 +87,10 @@ export class TitleScene extends FlightScene {
   }
 
   /**
-   * BGM を流してプレイへ切り替える。
+   * プレイへ切り替える（BGM は流れ続ける）。
    * @returns {void}
    */
   startPlay() {
-    this.playBgm();
     Engine.changeScene(new PlayScene(this.screen, () => Engine.changeScene(new TitleScene(this.screen))));
   }
 
@@ -101,16 +101,6 @@ export class TitleScene extends FlightScene {
    */
   onPointer(pointer) {
     if (pointer.type === 'down') this.startPlay();
-  }
-
-  /**
-   * 何かキーを押したら BGM を流す（開始はしない）。続けてミュートキーを処理する。
-   * @param {string} code 押されたキーのコード
-   * @returns {void}
-   */
-  onKeyDown(code) {
-    this.playBgm();
-    super.onKeyDown(code);
   }
 
   /**
