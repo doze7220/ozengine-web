@@ -1,5 +1,5 @@
 /**
- * @fileoverview 責務: FPS の計算と左上への表示だけを担う。
+ * @fileoverview 責務: FPS の計算と、論理座標での左上への表示（拡大の設定を含む）だけを担う。
  * 時間は引数でのみ受け取り、ゲーム状態は参照しない。
  */
 
@@ -8,9 +8,15 @@
  */
 export class DebugOverlay {
   /**
-   * 集計を初期化する。引数はない。
+   * 集計を初期化し、論理解像度を保持する。
+   * @param {number} width 論理解像度の幅（起動設定の width）。
+   * @param {number} height 論理解像度の高さ（起動設定の height）。
    */
-  constructor() {
+  constructor(width, height) {
+    /** @private 論理解像度の幅 */
+    this._width = width;
+    /** @private 論理解像度の高さ */
+    this._height = height;
     /** @private 集計中のフレーム数 */
     this._frames = 0;
     /** @private 集計中の経過時間（ミリ秒） */
@@ -35,12 +41,14 @@ export class DebugOverlay {
   }
 
   /**
-   * 左上に FPS を描く。状態は変更しない。
+   * 自分の save / restore の中で論理座標への拡大を設定し、左上に FPS を描く。
+   * 呼ぶ前の ctx の変換に依存しない。状態は変更しない。
    * @param {CanvasRenderingContext2D} ctx 描画先。
    * @returns {void}
    */
   draw(ctx) {
     ctx.save();
+    ctx.setTransform(ctx.canvas.width / this._width, 0, 0, ctx.canvas.height / this._height, 0, 0);
     ctx.font = '16px monospace';
     ctx.textBaseline = 'top';
     ctx.lineWidth = 3;

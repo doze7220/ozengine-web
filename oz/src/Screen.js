@@ -1,10 +1,16 @@
 /**
- * @fileoverview 責務: Canvas の論理解像度の設定、縦横比を保った表示サイズの調整、画面座標から論理座標への変換を担う。
- * 描画と入力の配信は行わない。
+ * @fileoverview 責務: 論理解像度の保持、縦横比を保った表示サイズの調整、表示サイズと画素密度（devicePixelRatio、上限 2）に合わせた
+ * Canvas の画素数の調整、画面座標から論理座標への変換を担う。ctx の操作、描画、入力の配信は行わない。
  */
 
 /**
- * 論理解像度を設定し、表示サイズをウィンドウに合わせ、画面座標を論理座標へ変換する。
+ * 画素密度（devicePixelRatio）の上限。画素数が増えすぎて重くならないようにするエンジンの仕様。
+ * @type {number}
+ */
+const MAX_PIXEL_RATIO = 2;
+
+/**
+ * 論理解像度を保持し、表示サイズと Canvas の画素数をウィンドウと画素密度に合わせ、画面座標を論理座標へ変換する。
  */
 export class Screen {
   /**
@@ -19,10 +25,6 @@ export class Screen {
     this._width = width;
     /** @private */
     this._height = height;
-
-    // 代入すると ctx の状態が初期化されるため、起動時の1回だけ設定する。
-    canvas.width = width;
-    canvas.height = height;
 
     this._fit();
     window.addEventListener('resize', () => this._fit());
@@ -43,13 +45,24 @@ export class Screen {
   }
 
   /**
-   * 縦横比を保ち、ウィンドウに収まる最大の表示サイズを canvas の style に設定する。
+   * 縦横比を保ち、ウィンドウに収まる最大の表示サイズを canvas の style に設定し、
+   * その CSS 画素数 × 画素密度（上限 MAX_PIXEL_RATIO、使えない値なら 1）を canvas の画素数にする。
+   * 画素数の代入は ctx の状態を初期化するため、値が違うときだけ行う。
    * @private
    * @returns {void}
    */
   _fit() {
     const scale = Math.min(window.innerWidth / this._width, window.innerHeight / this._height);
-    this._canvas.style.width = `${Math.floor(this._width * scale)}px`;
-    this._canvas.style.height = `${Math.floor(this._height * scale)}px`;
+    const cssWidth = Math.floor(this._width * scale);
+    const cssHeight = Math.floor(this._height * scale);
+    this._canvas.style.width = `${cssWidth}px`;
+    this._canvas.style.height = `${cssHeight}px`;
+
+    const dpr = window.devicePixelRatio;
+    const ratio = Number.isFinite(dpr) && dpr > 0 ? Math.min(dpr, MAX_PIXEL_RATIO) : 1;
+    const pixelWidth = Math.max(1, Math.round(cssWidth * ratio));
+    const pixelHeight = Math.max(1, Math.round(cssHeight * ratio));
+    if (this._canvas.width !== pixelWidth) this._canvas.width = pixelWidth;
+    if (this._canvas.height !== pixelHeight) this._canvas.height = pixelHeight;
   }
 }

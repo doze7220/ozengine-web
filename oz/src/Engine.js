@@ -131,12 +131,12 @@ export const Engine = {
     const ctx = config.canvas.getContext('2d');
     const newTime = new Time(config.tickRate === undefined ? DEFAULT_TICK_RATE : config.tickRate);
     const newScenes = new Scenes();
-    const layers = new Layers(config.layers);
+    const layers = new Layers(config.layers, config.width, config.height);
     const newButtons = new Buttons();
     const newKeys = new Keys();
     const newPads = Boolean(config.virtualPad) ? new VirtualPads() : null;
     const newInput = new Input({ canvas: config.canvas, screen, scenes: newScenes, buttons: newButtons, keys: newKeys, pads: newPads });
-    const overlay = Boolean(config.debug) ? new DebugOverlay() : null;
+    const overlay = Boolean(config.debug) ? new DebugOverlay(config.width, config.height) : null;
     const loop = new GameLoop({ ctx, time: newTime, scenes: newScenes, layers, input: newInput, overlay });
 
     time = newTime;

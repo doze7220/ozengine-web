@@ -47,6 +47,7 @@ import { Engine, Scene, Assets, Sound, Storage } from 'oz';
 ```
 
 * canvas の表示サイズ（`style.width` / `style.height`）はエンジンが設定する。CSS で幅と高さを指定しないこと。
+* canvas の画素数（`width`・`height` の属性）もエンジンが設定する（4章）。HTML で指定しても上書きされる。
 * 中央寄せと黒い余白は、上の CSS で行う。
 * `viewport` の `meta` は、スマートフォンでページが縮小表示されたり、2本の指で拡大されたりするのを止める。
 * `html, body` の `touch-action: none` は、canvas の外の黒い余白でも、拡大とスクロールを止める。
@@ -84,7 +85,12 @@ Engine.start({
 
 ## 4. 画面
 
-* `width` / `height` が Canvas の解像度と描画の座標になる。原点は左上で、x は右、y は下へ増える。
+* `width` / `height` が描画の座標（論理解像度）になる。原点は左上で、x は右、y は下へ増える。
+* Canvas の画素数（`canvas.width`・`canvas.height`）は論理解像度と一致しない。エンジンが、表示の大きさ（CSS の画素数）に画面の画素密度（`devicePixelRatio`。上限 2）を掛けた大きさにし、ウィンドウの大きさが変わると追従させる。起動設定で変えることはできない。
+* `draw` に渡す `ctx` には、論理座標で描けるように拡大の変換がエンジンによって設定されている。線と文字は画面の画素でくっきり描かれる。
+* `ctx.canvas.width`・`ctx.canvas.height` を論理解像度として使わないこと。解像度は起動設定の `width`・`height` を使う（シーンに渡しておく）。
+* `ctx.setTransform`・`ctx.resetTransform` で変換を初期化すると、論理座標が崩れる。変換を変えるときは、`save` と `restore` の中で `translate`・`rotate`・`scale` などを使うこと（13章、23章）。
+* `getImageData`・`putImageData` のように画素を直接読み書きする操作は変換が効かず、画素数の座標になる。
 * 表示は、ウィンドウに収まる最大の大きさに自動で合わせられる。縦横比は保たれ、ウィンドウの大きさを変えても追従する。
 * キャンバスは毎フレーム透明に消去される。シーンが描かない部分にはページの背景（上の CSS では黒）が見える。
 

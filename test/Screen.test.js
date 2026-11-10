@@ -1,5 +1,5 @@
 /**
- * @fileoverview 責務: oz/src/Screen.js の自動テスト（論理解像度、表示サイズの調整、リサイズ、toLogical）。
+ * @fileoverview 責務: oz/src/Screen.js の自動テスト（表示サイズの調整、画素数（devicePixelRatio と上限）、リサイズ、toLogical）。
  * 偽の window と偽の canvas を使い、公開されたものだけを通して確かめる。
  */
 import { test } from 'node:test';
@@ -10,11 +10,12 @@ import { Screen } from '../oz/src/Screen.js';
  * 偽の window を作る。addEventListener に登録されたリスナーを listeners に記録する。
  * @param {number} innerWidth ウィンドウの幅
  * @param {number} innerHeight ウィンドウの高さ
- * @returns {{innerWidth: number, innerHeight: number, listeners: Object<string, Function[]>, addEventListener: (type: string, listener: Function) => void}} 偽の window
+ * @param {number} [devicePixelRatio] 画素密度。省略時は持たない（倍率 1 として扱われる）
+ * @returns {{innerWidth: number, innerHeight: number, devicePixelRatio?: number, listeners: Object<string, Function[]>, addEventListener: (type: string, listener: Function) => void}} 偽の window
  */
-function createFakeWindow(innerWidth, innerHeight) {
+function createFakeWindow(innerWidth, innerHeight, devicePixelRatio) {
   const listeners = {};
-  return {
+  const fakeWindow = {
     innerWidth,
     innerHeight,
     listeners,
@@ -22,6 +23,8 @@ function createFakeWindow(innerWidth, innerHeight) {
       (listeners[type] ??= []).push(listener);
     },
   };
+  if (devicePixelRatio !== undefined) fakeWindow.devicePixelRatio = devicePixelRatio;
+  return fakeWindow;
 }
 
 /**
@@ -49,12 +52,28 @@ function installWindow(t, fakeWindow) {
 /**
  * 偽の canvas を作る。getBoundingClientRect の戻り値は rect プロパティを差し替えて変える。
  * @param {{left: number, top: number, width: number, height: number}} rect 表示矩形の初期値
- * @returns {{width: number, height: number, style: object, rect: object, getBoundingClientRect: () => object}} 偽の canvas
+ * width・height への代入は assigns.width・assigns.height に回数として数える。
+ * @returns {{width: number, height: number, assigns: {width: number, height: number}, style: object, rect: object, getBoundingClientRect: () => object}} 偽の canvas
  */
 function createFakeCanvas(rect) {
+  let width = 0;
+  let height = 0;
   return {
-    width: 0,
-    height: 0,
+    assigns: { width: 0, height: 0 },
+    get width() {
+      return width;
+    },
+    set width(value) {
+      width = value;
+      this.assigns.width += 1;
+    },
+    get height() {
+      return height;
+    },
+    set height(value) {
+      height = value;
+      this.assigns.height += 1;
+    },
     style: {},
     rect,
     getBoundingClientRect() {
@@ -69,20 +88,28 @@ function createFakeCanvas(rect) {
  * @param {number} innerWidth ウィンドウの幅
  * @param {number} innerHeight ウィンドウの高さ
  * @param {{left: number, top: number, width: number, height: number}} [rect] 表示矩形
+ * @param {number} [devicePixelRatio] 画素密度。省略時は持たない
  * @returns {{screen: Screen, canvas: ReturnType<typeof createFakeCanvas>, fakeWindow: ReturnType<typeof createFakeWindow>}} 作ったもの
  */
-function createScreen(t, innerWidth, innerHeight, rect = { left: 0, top: 0, width: 320, height: 180 }) {
-  const fakeWindow = createFakeWindow(innerWidth, innerHeight);
+function createScreen(t, innerWidth, innerHeight, rect = { left: 0, top: 0, width: 320, height: 180 }, devicePixelRatio) {
+  const fakeWindow = createFakeWindow(innerWidth, innerHeight, devicePixelRatio);
   installWindow(t, fakeWindow);
   const canvas = createFakeCanvas(rect);
   const screen = new Screen(canvas, 320, 180);
   return { screen, canvas, fakeWindow };
 }
 
-test('構築時に canvas の width・height が論理解像度になる', (t) => {
-  const { canvas } = createScreen(t, 1280, 720);
-  assert.equal(canvas.width, 320);
-  assert.equal(canvas.height, 180);
+test('構築時に canvas の width・height が表示サイズ（倍率 1）になる', async (t) => {
+  await t.test('1280x720 のウィンドウ', (st) => {
+    const { canvas } = createScreen(st, 1280, 720);
+    assert.equal(canvas.width, 1280);
+    assert.equal(canvas.height, 720);
+  });
+  await t.test('1000x700 のウィンドウ', (st) => {
+    const { canvas } = createScreen(st, 1000, 700);
+    assert.equal(canvas.width, 1000);
+    assert.equal(canvas.height, 562);
+  });
 });
 
 test('ウィンドウと同じ縦横比なら style がウィンドウの大きさになる', (t) => {
@@ -109,15 +136,62 @@ test('構築時に window へ resize のリスナーが登録される', (t) => 
   assert.equal(typeof fakeWindow.listeners.resize[0], 'function');
 });
 
-test('リサイズで style が新しいウィンドウに合わせて変わり、canvas の大きさは変わらない', (t) => {
+test('リサイズで style と canvas の画素数が新しいウィンドウに合わせて変わる', (t) => {
   const { canvas, fakeWindow } = createScreen(t, 1280, 720);
   fakeWindow.innerWidth = 2000;
   fakeWindow.innerHeight = 360;
   for (const listener of fakeWindow.listeners.resize) listener();
   assert.equal(canvas.style.width, '640px');
   assert.equal(canvas.style.height, '360px');
-  assert.equal(canvas.width, 320);
-  assert.equal(canvas.height, 180);
+  assert.equal(canvas.width, 640);
+  assert.equal(canvas.height, 360);
+});
+
+test('devicePixelRatio が 2 なら画素数が表示サイズの2倍になる', (t) => {
+  const { canvas } = createScreen(t, 1280, 720, undefined, 2);
+  assert.equal(canvas.style.width, '1280px');
+  assert.equal(canvas.width, 2560);
+  assert.equal(canvas.height, 1440);
+});
+
+test('devicePixelRatio が 1.5 なら四捨五入した1.5倍になる', (t) => {
+  const { canvas } = createScreen(t, 1000, 700, undefined, 1.5);
+  assert.equal(canvas.style.width, '1000px');
+  assert.equal(canvas.style.height, '562px');
+  assert.equal(canvas.width, 1500);
+  assert.equal(canvas.height, 843);
+});
+
+test('devicePixelRatio が 3 でも上限の 2 として扱われる', (t) => {
+  const { canvas } = createScreen(t, 1280, 720, undefined, 3);
+  assert.equal(canvas.width, 2560);
+  assert.equal(canvas.height, 1440);
+});
+
+test('devicePixelRatio が使えない値なら倍率 1 として扱われる', async (t) => {
+  for (const value of [0, NaN, -2]) {
+    await t.test(`値 ${value}`, (st) => {
+      const { canvas } = createScreen(st, 1280, 720, undefined, value);
+      assert.equal(canvas.width, 1280);
+      assert.equal(canvas.height, 720);
+    });
+  }
+});
+
+test('リサイズで devicePixelRatio が変わると画素数が追従する', (t) => {
+  const { canvas, fakeWindow } = createScreen(t, 1280, 720, undefined, 1);
+  assert.equal(canvas.width, 1280);
+  fakeWindow.devicePixelRatio = 2;
+  for (const listener of fakeWindow.listeners.resize) listener();
+  assert.equal(canvas.width, 2560);
+  assert.equal(canvas.height, 1440);
+});
+
+test('リサイズで画素数が変わらないときは width・height に代入しない', (t) => {
+  const { canvas, fakeWindow } = createScreen(t, 1280, 720);
+  assert.deepEqual(canvas.assigns, { width: 1, height: 1 });
+  for (const listener of fakeWindow.listeners.resize) listener();
+  assert.deepEqual(canvas.assigns, { width: 1, height: 1 });
 });
 
 test('toLogical: 表示矩形が論理解像度と同じなら座標がそのまま返る', (t) => {
