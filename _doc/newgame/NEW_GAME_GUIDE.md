@@ -316,7 +316,7 @@ grep -rn "ozengine sample" index.html js assets
 *   手順2・3の `-r`（`xargs` の入力が空なら実行しない）は、目印がすでに無いときに、`rm`・`sed` が空の引数でエラーにならないようにするためである。
 *   手順2の `/* ozengine sample */` は固定の文字列で、範囲の目印（`/* ozengine sample: begin */`）には一致しない。
 *   空になったフォルダ（`js/scenes/` など）は残してよい。git は空のフォルダを記録しない。
-*   現在の土台では、手順を終えると `js/` には `js/main.js` だけが残り、その `import` は `'oz'` だけになる。
+*   現在の土台では、手順を終えると `js/` には次の4ファイルが残る。期待する結果: `js/main.js`、`js/scenes/MenuScene.js`、`js/ui/virtualPadConfig.js`、`js/ui/virtualPadView.js`（`find js -type f` で4つだけ出る）。これらはバーチャルパッド（画面のスティックとボタン）とメニューの仕組みで、目印が付いていない。`js/main.js` の `import` は `'oz'` だけになり、残りの3つはどこからも読み込まれないので、起動には影響しない。7章の7-4 に使い方を書いてある。
 
 ### 6-3. 見本の素材を消す（Claude Code が行う）
 目印を消すと、見本のコードが使っていた素材（画像、音、スプライト）が参照されなくなる。参照されていない素材を、次の順に消す。
@@ -337,7 +337,13 @@ grep -rn "ozengine sample" index.html js assets
 3.  一覧のうち、手順1で参照されていないファイルを削除する（`rm -- <ファイル>`）。
 4.  もう一度、手順1と2を実行して、参照が切れたファイルや、参照されないまま残ったファイルがないことを確かめる。
 
-現時点の土台での例: 目印を消すと素材への参照が1つも残らないので、`assets/images/sample.png`・`assets/sounds/sample_bgm.mp3`・`assets/sounds/sample_se.mp3`・`assets/sprites/ship.js` のすべてが削除の対象になる。このファイル名は例である。ファイル名には頼らず、いつも「参照されていないファイル」で判断すること。
+期待する結果（バーチャルパッドの既定の画像）: `assets/images/vpad/` の画像は、目印の付いていない `js/ui/virtualPadConfig.js` に書かれたパスから参照されている。そのため、手順1の結果にこの画像のパスが出て、「参照されているファイル」と判定され、消されない。この手順そのものは変えなくてよい。
+
+現時点の土台での例:
+*   消える4ファイル（目印を消した後に参照が残らない）: `assets/images/sample.png`・`assets/sounds/sample_bgm.mp3`・`assets/sounds/sample_se.mp3`・`assets/sprites/ship.js`。
+*   残る4ファイル（`js/ui/virtualPadConfig.js` から参照されている）: `assets/images/vpad/` の `stick_base.svg`・`stick_knob.svg`・`button_boost.svg`・`button_boost_pressed.svg`。
+
+このファイル名は例である。ファイル名には頼らず、いつも「参照されていないファイル」で判断すること。
 
 ゲームの素材の置き場所は、土台と同じ `assets/images/`・`assets/sounds/`・`assets/sprites/` である（空になったフォルダは残してよい）。
 
@@ -360,6 +366,9 @@ grep -rn "ozengine sample" index.html js assets
 *   `js/main.js` の解像度（`width`・`height`）。
 *   `js/main.js` の `layers`（レイヤーの定義）。
 *   `js/main.js` の最初のシーン。
+*   `js/main.js` の `virtualPad`（画面のスティックとボタンを使うか。7-4）。
+*   `js/ui/virtualPadConfig.js` のパッドの定義（配置、キー、画像のファイル名。7-4）。
+*   メニューの項目（`js/scenes/MenuScene.js` に渡す項目。7-4）。
 
 ### 7-2. 起動の確認（発注者）
 1.  ふだん使っている静的サーバで、`<ゲームのフォルダ>` をルートにして `index.html` を開く。`file://` で開いても動かない（`oz/ENGINE_API.md` 1章）。
@@ -371,6 +380,32 @@ grep -rn "ozengine sample" index.html js assets
 起動の確認と同じ機会に、4章の「設定が効いていることの確かめ方」の3項目を、Claude Code に頼んで行う。その後、5章の照合を行い、`OK` を確かめる。
 
 エラーが出る、または設定が効かないときは、そこで止めて、原因を調べる（立ち上げの Step 1 に進まない）。
+
+### 7-4. 目印を消した後に残る仕組み（バーチャルパッドとメニュー）
+6章で目印を消した後も、次の仕組みは `js/` に残る。ゲームの Phase の REQ で使い方を指示する（コードを書くのは Claude Code である）。
+
+**バーチャルパッドの ON / OFF（`js/main.js`）**
+*   `virtualPad: true`（既定）のまま、スマートフォンなど指で触れる端末で開く → 画面を指で触れたあとに、パッドが定義されたシーンでスティックとボタンが出る。パッドが定義されていないシーン（空のシーンなど）では何も出ない。マウスとキーボードだけの PC では出ない。
+*   `virtualPad: true` を `false` に変える → スマートフォンで触れても、スティックとボタンが出ない。既定の画像も読み込まれない。PC の操作は変わらない。
+*   パッドを使わないゲームは `false` にしてよい。このときも、下の3ファイルと画像は消さずに残してよい。
+
+**パッドの定義と描画を使う（`js/ui/virtualPadConfig.js` と `js/ui/virtualPadView.js`）**
+*   `virtualPadConfig.js` には、スティックとボタンの配置、割り当てるキー、画像のファイル名が書かれている。ゲームの REQ で「プレイのシーンでこの定義を使ってパッドを出す」と指示する → そのシーンでパッドが動き、押すとキーボードを押したときと同じ動きになる。
+*   `virtualPadView.js` は、画像の読み込みと描画を担う。ロード画面で画像を読み込み、プレイのシーンの描画で呼ぶ、という使い方を REQ で指示する。
+*   配置やキーを変えたいとき → REQ に「スティックを右へ寄せる」などと書く。`virtualPadConfig.js` の値が直り、見た目と位置が変わる。
+
+**既定の画像を差し替える**
+*   方法A: `assets/images/vpad/` の同じファイル名（`stick_base.svg`・`stick_knob.svg`・`button_boost.svg`・`button_boost_pressed.svg`）で、自分の画像を上書きする → 再読み込みすると、スティックとボタンの見た目が変わる。
+*   方法B: `js/ui/virtualPadConfig.js` に書かれたファイル名を、自分の画像のファイル名に書き換える（PNG も使える。画像は `assets/` の下に置き、パスは `./assets/` から始める） → 再読み込みすると、見た目が変わる。画像のパスが `js/ui/virtualPadConfig.js` に書かれていて、そこから参照されるので、6-3 で消されない。
+*   どちらの場合も、画像が見つからないとコンソールに警告（`[oz] Assets.load:` で始まる）が出て、エラーにはならず動き続ける。このときスティックやボタンは透明になり、画面に何も見えなくなる。警告が出たら、ファイル名とパスを見直す。
+
+**メニューの仕組み（`js/scenes/MenuScene.js`）**
+*   プレイ中に開く、項目が縦に並んだメニューの仕組みである。ゲームの REQ で「このゲームのメニューの項目は〇〇」と指示すると、その項目が並ぶ。
+*   土台のメニューの項目（閉じる・スロー・ミュート・タイトルに戻る）は見本なので、6章で消える。ゲームでは自分の項目を渡して使う。
+*   メニューが開いている間は、下のシーンは止まる。項目の外を押しても何も起きない。
+
+**使わないゲームでは**
+*   `virtualPad` を `false` にし、メニューも使わないなら、3つの `.js` と画像はそのまま残してよい。どこからも読み込まれないので、起動に影響しない。
 
 ## 8. 憲法と開発資料にエンジンについて書く
 
