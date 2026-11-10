@@ -1,10 +1,9 @@
 /**
- * 責務: 素材のロード中の表示と、ミュート設定の反映、ロード完了後のタイトルへの切り替え。
+ * 責務: 素材のロード中の表示と、ミュート設定の反映、ロード完了後に渡された次の画面への切り替え。
  */
 /* ozengine sample */
 import { Assets, Engine, Scene } from 'oz';
 import { loadVirtualPadImages } from '../ui/virtualPadView.js';
-import { TitleScene } from './TitleScene.js';
 import { openMute } from './mute.js';
 import { drawMuteLabel, drawText } from './uiText.js';
 
@@ -27,24 +26,27 @@ const LOADING_FONT = '32px sans-serif';
 /** 文字を描くレイヤー名 */
 const UI_LAYER = 'ui';
 
-/** 最初のシーン。素材をロードしてタイトルへ切り替える */
+/** 最初のシーン。素材をロードして、渡された次の画面へ切り替える */
 export class LoadScene extends Scene {
   /**
    * @param {Screen} screen 解像度
+   * @param {() => Scene} next 次の画面のシーンを作る関数（ロード完了後に呼ぶ）
    */
-  constructor(screen) {
+  constructor(screen, next) {
     super();
     /** @type {Screen} 解像度 */
     this.screen = screen;
+    /** @type {() => Scene} 次の画面のシーンを作る関数 */
+    this.next = next;
   }
 
   /**
-   * ミュート設定を反映し、素材をロードして、終わったらタイトルへ切り替える。
+   * ミュート設定を反映し、素材をロードして、終わったら次の画面へ切り替える。
    * @returns {void}
    */
   init() {
     openMute();
-    Promise.all([Assets.load(ASSET_LIST), loadVirtualPadImages()]).then(() => Engine.changeScene(new TitleScene(this.screen)));
+    Promise.all([Assets.load(ASSET_LIST), loadVirtualPadImages()]).then(() => Engine.changeScene(this.next()));
   }
 
   /**
