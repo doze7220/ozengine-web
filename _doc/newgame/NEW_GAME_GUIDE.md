@@ -302,7 +302,7 @@ grep -rlZF '/* ozengine sample */' js assets | xargs -0 -r rm --
 grep -rlZF 'ozengine sample: begin' js assets | xargs -0 -r sed -i '/ozengine sample: begin/,/ozengine sample: end/d'
 ```
 
-期待する結果: 何も表示されない。範囲の目印のあるファイル（現在の土台では `js/main.js`）から、目印で囲んだ範囲が消える。
+期待する結果: 何も表示されない。範囲の目印のあるファイル（現在の土台では `js/main.js` と `js/scenes/BootScene.js`）から、目印で囲んだ範囲が消える。
 
 **4. 確認:** 目印が残っていないことを確かめる。
 
@@ -316,7 +316,7 @@ grep -rn "ozengine sample" index.html js assets
 *   手順2・3の `-r`（`xargs` の入力が空なら実行しない）は、目印がすでに無いときに、`rm`・`sed` が空の引数でエラーにならないようにするためである。
 *   手順2の `/* ozengine sample */` は固定の文字列で、範囲の目印（`/* ozengine sample: begin */`）には一致しない。
 *   空になったフォルダ（`js/scenes/` など）は残してよい。git は空のフォルダを記録しない。
-*   現在の土台では、手順を終えると `js/` には次の4ファイルが残る。期待する結果: `js/main.js`、`js/scenes/MenuScene.js`、`js/ui/virtualPadConfig.js`、`js/ui/virtualPadView.js`（`find js -type f` で4つだけ出る）。これらはバーチャルパッド（画面のスティックとボタン）とメニューの仕組みで、目印が付いていない。`js/main.js` の `import` は `'oz'` だけになり、残りの3つはどこからも読み込まれないので、起動には影響しない。7章の7-4 に使い方を書いてある。
+*   現在の土台では、手順を終えると `js/` には次の5ファイルが残る。期待する結果: `js/main.js`、`js/scenes/BootScene.js`、`js/scenes/MenuScene.js`、`js/ui/virtualPadConfig.js`、`js/ui/virtualPadView.js`（`find js -type f` で5つだけ出る）。これらは boot 画面（最初の入力を受ける画面）、バーチャルパッド（画面のスティックとボタン）、メニューの仕組みで、目印が付いていない（`BootScene.js` の押した瞬間の SE の部分は目印が付いていたので消える）。`js/main.js` の `import` は `'oz'` と `./scenes/BootScene.js` だけになり、残りの3つ（`MenuScene.js`・`virtualPadConfig.js`・`virtualPadView.js`）はどこからも読み込まれないので、起動には影響しない。7章の7-4 に使い方を書いてある。
 
 ### 6-3. 見本の素材を消す（Claude Code が行う）
 目印を消すと、見本のコードが使っていた素材（画像、音、スプライト）が参照されなくなる。参照されていない素材を、次の順に消す。
@@ -365,7 +365,8 @@ grep -rn "ozengine sample" index.html js assets
 
 *   `js/main.js` の解像度（`width`・`height`）。
 *   `js/main.js` の `layers`（レイヤーの定義）。
-*   `js/main.js` の最初のシーン。
+*   `js/main.js` の boot 画面の次に進む画面（`next`）。
+*   boot 画面の表示の内容（`js/scenes/BootScene.js` の文字など）。
 *   `js/main.js` の `virtualPad`（画面のスティックとボタンを使うか。7-4）。
 *   `js/ui/virtualPadConfig.js` のパッドの定義（配置、キー、画像のファイル名。7-4）。
 *   メニューの項目（`js/scenes/MenuScene.js` に渡す項目。7-4）。
@@ -374,15 +375,21 @@ grep -rn "ozengine sample" index.html js assets
 1.  ふだん使っている静的サーバで、`<ゲームのフォルダ>` をルートにして `index.html` を開く。`file://` で開いても動かない（`oz/ENGINE_API.md` 1章）。
 2.  ブラウザの開発者ツールのコンソールを開き、エラーが出ていないことを確かめる。
 
-期待する結果: コンソールにエラーが出ない。6章で目印を消した直後は、`js/main.js` の既定の空の `Scene` が動くだけなので、画面は黒いままでよい。
+期待する結果: 黒い画面の中央に「TAP SCREEN」と表示される。画面をクリック（スマートフォンではタップ）するか、キー（`Escape` 以外）を押すと、次の画面（6章で目印を消した直後は空のシーンなので、黒い画面）に変わる。コンソールにエラーが出ない。
 
 ### 7-3. 設定が効いていることの確認（発注者）
 起動の確認と同じ機会に、4章の「設定が効いていることの確かめ方」の3項目を、Claude Code に頼んで行う。その後、5章の照合を行い、`OK` を確かめる。
 
 エラーが出る、または設定が効かないときは、そこで止めて、原因を調べる（立ち上げの Step 1 に進まない）。
 
-### 7-4. 目印を消した後に残る仕組み（バーチャルパッドとメニュー）
+### 7-4. 目印を消した後に残る仕組み（boot 画面、バーチャルパッドとメニュー）
 6章で目印を消した後も、次の仕組みは `js/` に残る。ゲームの Phase の REQ で使い方を指示する（コードを書くのは Claude Code である）。
+
+**boot 画面（`js/scenes/BootScene.js`）**
+*   最初の入力（画面に触れる、クリック、キー）を受けて、音を鳴らせる状態にするための画面である。起動すると、黒い画面に「TAP SCREEN」が出て、押す（離す）かキー（`Escape` 以外）を押すと次の画面へ進む。
+*   表示の内容（文字、色、フォント）は `BootScene.js` の先頭の値を、次に進む画面は `js/main.js` の `next` を、ゲームの Phase の REQ で「文字を〇〇にする」「次の画面は〇〇にする」と指示して書き換える → 起動したときの画面と、押したあとの画面が変わる。
+*   ロードの画面を作るなら、ロード → boot → 本編、または boot → ロード → 本編のどちらの順にもできる。boot 画面で音を鳴らすなら、ロードを先にする。
+*   boot 画面を離れたあとは、入力を待たずに BGM を流せる（次の画面の開始で流してよい）。
 
 **バーチャルパッドの ON / OFF（`js/main.js`）**
 *   `virtualPad: true`（既定）のまま、スマートフォンなど指で触れる端末で開く → 画面を指で触れたあとに、パッドが定義されたシーンでスティックとボタンが出る。パッドが定義されていないシーン（空のシーンなど）では何も出ない。マウスとキーボードだけの PC では出ない。
