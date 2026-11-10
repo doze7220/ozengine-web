@@ -11,7 +11,7 @@
 ---
 
 ### 1. プロジェクト現況スナップショット（最終更新：2026-11-10）
-* Phase 02 クローズ済み。Phase 02 の DIR・REQ・RES は `closed/` へ移した（棚卸し済み）。Phase 03 進行中（DIR: `./_log/dir/261109_2045_DIR_Phase03-00_新規プロジェクトの準備とスマホ対応.md`）。Phase 03-01・03-02・03-03 はテストプレイ済み（03-02 のテストプレイは 03-03 の実機確認と一緒に行った）。Phase 03-03（スマホ対応の残りと実機での確認）は全タスク実装・監査済みで、DIR の更新は親セッションが行う。
+* Phase 03 クローズ済み（4章）。Phase 03 の DIR・REQ・RES は `_log/` の直下に残っており、次の Phase の DIR 策定前に `_doc/PROJECT_PHASE_TRANSITION_CLEANUP.md` の手順で `closed/` へ移す。次は Phase 04（キャンバスキャッシュ。`_doc/PROJECT_MILESTONE.md`）。
 
 ---
 
@@ -28,20 +28,16 @@
 * `oz/index.js` を import した時点で `window` が必要である（`Sound` が入力の登録を読み込み時に行うため）。Phase 02-04 の自動テストは `oz/src/` を直接 import し、`oz/index.js` を読み込まないことで回避した。`Sound` をテストの対象にするときに、スタブを用意してから動的 import するか、登録の時期を見直すかを決める（`PROJECT_ARCHITECTURE.md` 4章「自動テスト（`test/`）の規則」）。
 * `Storage` の保存データの読み込みでは、版番号が同じなら保存値の型や中身を確かめずにそのまま使う。このことは `oz/ENGINE_API.md` 22章に書かれていない。書くかどうかを判断する（RES: `./_log/res/261109_1730_RES_Phase02-04_自動テストの導入.md` 5章）。
 * `oz/VERSION` を上げる時期の規則がない（Phase 02 で `oz/` を変えたときも `0.1.0` のまま）。新規プロジェクトの手順書では、更新の要否を版ではなく指紋一覧どうしの比較で確かめる形にした。規則を決めるかを判断する（RES: `./_log/res/261109_2115_RES_Phase03-01_新規プロジェクトの作り方とゲーム用のルール.md` 5章）。
-* 指紋一覧（`oz/FINGERPRINTS.txt`）の作り直しの運用は `PROJECT_ARCHITECTURE.md` 4章にだけ書いてある。忘れても `node --test` が失敗するので気づけるが、憲法や実装AI・監査AIの定義に明記するかを判断する（同RES 5章）。
-* 手順書 `_doc/newgame/NEW_GAME_GUIDE.md` 6-3 の見本の素材の参照調べは `assets/` の中を調べないので、組み立て用のスプライト（`assets/sprites/_*.js`）を土台に入れると、そのパーツが「参照されていない」と判断されて消されるおそれがある。組み立て用のJSを土台に入れるときに 6-3 を見直す（同RES 5章）。
-* ゲームのプロジェクトの Claude Code の deny 設定は、ファイル名を書かずに読むシェルのコマンド・スクリプト・`rm` などによる書き換えを防がない。ルールの文面での禁止と、指紋の照合・`git status` による事後の発見で補っている。強く防ぐ必要が出たら sandbox を検討する（同RES 5章、手順書4章）。
-* `_doc/PROJECT_MILESTONE.md` の「アニメーション」の項が、組み立て用のJSの扱いの記載場所を `PROJECT_ARCHITECTURE.md` 2.1章としている。Phase 03-01 で約束を `oz/ENGINE_API.md` 23章に移したので、参照先が古い。
-* `oz/src/Engine.js` の `requireStarted` は、既存の `requireScenes` と同じ判定・同じエラー文の重複である。動作に問題はない。`Engine.js` を次に触るときにまとめるかを判断する（同RES タスク5の監査）。
-* `js/main.js` の先頭の責務定義が「Engine.start の呼び出しとレイヤーの定義」のままで、起動設定に `virtualPad` が増えたことを表していない（同RES タスク7の監査）。
+* 手順書 `_doc/newgame/NEW_GAME_GUIDE.md` 6-3 の見本の素材の参照調べは `assets/` の中を調べないので、組み立て用のスプライト（`assets/sprites/_*.js`）を土台に入れると、そのパーツが「参照されていない」と判断されて消されるおそれがある。組み立て用のJSを土台に入れるときに 6-3 を見直す（RES: `./_log/res/261109_2115_RES_Phase03-01_新規プロジェクトの作り方とゲーム用のルール.md` 5章）。
+* `oz/src/Engine.js` の `requireStarted` は、既存の `requireScenes` と同じ判定・同じエラー文の重複である。動作に問題はない。`Engine.js` を次に触るときにまとめるかを判断する（RES: `./_log/res/261110_1013_RES_Phase03-02_マルチタッチとバーチャルコントローラー.md` タスク5の監査）。
 * `test/Screen.test.js` の `createFakeCanvas` の JSDoc で、関数の説明文が `@param rect` の後ろに書かれていて、引数の説明の続きとして読まれる。動作には影響しない。次に触るときに直す（RES: `./_log/res/261110_1219_RES_Phase03-03_スマホ対応の残りと実機での確認.md` タスク2の監査）。
-* 画素密度の違うモニターの間でウィンドウを動かしたとき、ブラウザが `resize` を出さないと、ウィンドウの大きさを変えるまで Canvas の画素数が前のモニターのままになる（少しぼやける、または重い）。`resize` 以外の検知はしていない（同RES 5章）。
 
 ---
 
 ### 4. Phaseクローズ記録
 * **Phase 01（最小エンジンとゲームの土台）:** 2026-11-05 クローズ。`oz/` の最小エンジンと、その上で動くゲームの土台（`index.html`・`js/`・`assets/`）が完成した。DIR 1章の完了の目安の4点を確認した。持ち越しは本ファイルの2章・3章、解決済み・破棄した項目は `_doc/COWORK_STATUS_CLOSED.md` にある。
 * **Phase 02（スプライトJSの結合と自動テストの導入）:** 2026-11-09 クローズ。OZ Vector Editor の書き出したスプライトJSを `assets/sprites/` に置くだけで土台に表示できるようになり、M1 を達成した。`PROJECT_ARCHITECTURE.md` 2.1章をエンジン側の約束だけの形に改訂し、`Time`・`Scenes`・`Screen`・`Storage` の自動テスト（`node --test`）を検証コマンドに加えた。DIR 1章の完了の目安の3点を確認した。持ち越しは本ファイルの3章、解決済み・破棄した項目は `_doc/COWORK_STATUS_CLOSED.md` にある。
+* **Phase 03（新規プロジェクトの準備とスマホ対応）:** 2026-11-10 クローズ。本リポジトリから新しいゲームのプロジェクトを作る手順書・ゲームの憲法に貼るルールの文面・Claude Code の設定例（`_doc/newgame/`）と、`oz/` の指紋一覧（`oz/FINGERPRINTS.txt`）をそろえ、スプライトJSの約束を `oz/ENGINE_API.md` 23章へ移した。エンジンにマルチタッチとバーチャルパッド（`Keys`・`VirtualPad`・`VirtualPads`）を入れ、土台にスティック・ボタン・メニュー・boot 画面を足した。iOS の割り込みのあとの音の再開と、Canvas の画素数の高解像度への対応（表示サイズ × min(倍率, 2)）を行い、GitHub Pages で実機確認した。DIR 1章の完了の目安の3点を確認した。持ち越しは本ファイルの2章・3章、解決済み・破棄した項目は `_doc/COWORK_STATUS_CLOSED.md` にある。
 
 ---
 
