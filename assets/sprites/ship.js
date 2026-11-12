@@ -1,34 +1,267 @@
 /**
- * 責務: 機体の見た目（白い多角形と2つの円）を描画する手書きのスプライト。
- * 位置や動きは持たない。外部に依存しない。既定のexportだけを持つ（エディタの書き出し形式に合わせる）。
+ * OZ Vector Editor が出力したスプライト（ESモジュール）。他のファイルに依存しない。
+ * 既定のexportは、スプライトデータ（format・formatVersion・bounds・elements・source）と、
+ * それを描く draw(ctx) を持つ1つのオブジェクト。座標の単位はpx、基準点は原点(0, 0)、y軸は下向き。
  */
+const spriteData = {
+  "format": "oz-vector-editor-sprite",
+  "formatVersion": 2,
+  "bounds": {
+    "minX": -23,
+    "minY": -18,
+    "maxX": 22,
+    "maxY": 18
+  },
+  "elements": [
+    {
+      "kind": "polyline",
+      "id": "1",
+      "points": [
+        {
+          "x": 22,
+          "y": 0
+        },
+        {
+          "x": -23,
+          "y": 18
+        },
+        {
+          "x": -13,
+          "y": 0
+        },
+        {
+          "x": -23,
+          "y": -18
+        }
+      ],
+      "closed": true,
+      "strokeColor": null,
+      "strokeWidth": 2,
+      "fillColor": "#ffffff"
+    },
+    {
+      "kind": "ellipse",
+      "id": "2",
+      "x": -18,
+      "y": -12,
+      "radiusX": 3,
+      "radiusY": 3,
+      "startAngle": 0,
+      "endAngle": 6.283185307179586,
+      "closed": true,
+      "strokeColor": null,
+      "strokeWidth": 2,
+      "fillColor": "#ffffff"
+    },
+    {
+      "kind": "ellipse",
+      "id": "3",
+      "x": -18,
+      "y": 12,
+      "radiusX": 3,
+      "radiusY": 3,
+      "startAngle": 0,
+      "endAngle": 6.283185307179586,
+      "closed": true,
+      "strokeColor": null,
+      "strokeWidth": 2,
+      "fillColor": "#ffffff"
+    }
+  ],
+  "source": {
+    "format": "oz-vector-editor",
+    "version": 2,
+    "shapes": [
+      {
+        "type": "path",
+        "id": "1",
+        "points": [
+          {
+            "x": 22,
+            "y": 0
+          },
+          {
+            "x": -23,
+            "y": 18
+          },
+          {
+            "x": -13,
+            "y": 0
+          },
+          {
+            "x": -23,
+            "y": -18
+          }
+        ],
+        "closed": true,
+        "segments": [
+          {
+            "kind": "line"
+          },
+          {
+            "kind": "line"
+          },
+          {
+            "kind": "line"
+          },
+          {
+            "kind": "line"
+          }
+        ],
+        "strokeColor": null,
+        "strokeWidth": 2,
+        "fillColor": "#ffffff"
+      },
+      {
+        "type": "circle",
+        "id": "2",
+        "points": [
+          {
+            "x": -18,
+            "y": -12
+          },
+          {
+            "x": -15,
+            "y": -12
+          },
+          {
+            "x": -18,
+            "y": -15
+          },
+          {
+            "x": -15,
+            "y": -12
+          },
+          {
+            "x": -15,
+            "y": -12
+          }
+        ],
+        "strokeColor": null,
+        "strokeWidth": 2,
+        "fillColor": "#ffffff"
+      },
+      {
+        "type": "circle",
+        "id": "3",
+        "points": [
+          {
+            "x": -18,
+            "y": 12
+          },
+          {
+            "x": -15,
+            "y": 12
+          },
+          {
+            "x": -18,
+            "y": 9
+          },
+          {
+            "x": -15,
+            "y": 12
+          },
+          {
+            "x": -15,
+            "y": 12
+          }
+        ],
+        "strokeColor": null,
+        "strokeWidth": 2,
+        "fillColor": "#ffffff"
+      }
+    ]
+  }
+};
+
+const DEFAULT_STROKE_WIDTH = 2;
 
 /**
- * 機体を原点 (0, 0)、前方 +X で描く。ctx の現在の変換の上に描き、ctx の状態は元に戻す。
- * @param {CanvasRenderingContext2D} ctx 描画先
- * @returns {void}
+ * スプライトを ctx へ描く。ctx の現在の変換の上に、原点(0, 0)を基準に描く。呼び出し前後で ctx の状態は変わらない。
+ * @param {CanvasRenderingContext2D} ctx - 描画先の2Dコンテキスト
  */
 function draw(ctx) {
-  ctx.save();
-  ctx.fillStyle = '#ffffff';
-  ctx.beginPath();
-  ctx.moveTo(22, 0);
-  ctx.lineTo(-23, 18);
-  ctx.lineTo(-13, 0);
-  ctx.lineTo(-23, -18);
-  ctx.closePath();
-  ctx.fill();
-  ctx.beginPath();
-  ctx.arc(-18, -12, 3, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.beginPath();
-  ctx.arc(-18, 12, 3, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.restore();
+    ctx.save();
+    try {
+        ctx.lineCap = 'butt';
+        ctx.lineJoin = 'miter';
+        ctx.miterLimit = 10;
+        ctx.setLineDash([]);
+        for (const element of spriteData.elements) {
+            drawElement(ctx, element);
+        }
+    } finally {
+        ctx.restore();
+    }
 }
 
 /**
- * スプライトの既定のexport。描画関数 draw(ctx) だけを持つ。
- * @type {{draw: function(CanvasRenderingContext2D): void}}
+ * 描画要素1つの塗りと線を描く（パス → 塗り → 線の順）。
+ * 塗るのは、fillColor が文字列で、かつ kind が polyline または ellipse で closed が true の要素だけ（fill() は引数なし）。
+ * 線を描くのは strokeColor が文字列の要素だけ。どちらも描かない要素はパスも組み立てない。
+ * 形の項目が足りない要素・未知の kind の要素は塗りも線も描かない。
+ * @param {CanvasRenderingContext2D} ctx - 描画先の2Dコンテキスト
+ * @param {Object} element - 描画要素
  */
-export default { draw };
+function drawElement(ctx, element) {
+    const shouldStroke = typeof element.strokeColor === 'string';
+    const shouldFill = typeof element.fillColor === 'string' && element.closed === true
+        && (element.kind === 'polyline' || element.kind === 'ellipse');
+    if (!shouldStroke && !shouldFill) {
+        return;
+    }
+    switch (element.kind) {
+        case 'polyline': {
+            const points = element.points;
+            if (!Array.isArray(points) || points.length < 2) {
+                return;
+            }
+            ctx.beginPath();
+            ctx.moveTo(points[0].x, points[0].y);
+            for (let i = 1; i < points.length; i++) {
+                ctx.lineTo(points[i].x, points[i].y);
+            }
+            if (element.closed === true) {
+                ctx.closePath();
+            }
+            break;
+        }
+        case 'quadratic': {
+            const points = element.points;
+            if (!Array.isArray(points) || points.length < 3) {
+                return;
+            }
+            ctx.beginPath();
+            ctx.moveTo(points[0].x, points[0].y);
+            ctx.quadraticCurveTo(points[1].x, points[1].y, points[2].x, points[2].y);
+            break;
+        }
+        case 'ellipse': {
+            if (typeof element.radiusX !== 'number' || !(element.radiusX >= 0)
+                || typeof element.radiusY !== 'number' || !(element.radiusY >= 0)) {
+                return;
+            }
+            ctx.beginPath();
+            ctx.ellipse(element.x, element.y, element.radiusX, element.radiusY, 0, element.startAngle, element.endAngle);
+            if (element.closed === true) {
+                ctx.closePath();
+            }
+            break;
+        }
+        default:
+            return;
+    }
+    if (shouldFill) {
+        ctx.fillStyle = element.fillColor;
+        ctx.fill();
+    }
+    if (shouldStroke) {
+        ctx.strokeStyle = element.strokeColor;
+        ctx.lineWidth = typeof element.strokeWidth === 'number' && Number.isFinite(element.strokeWidth) && element.strokeWidth > 0
+            ? element.strokeWidth
+            : DEFAULT_STROKE_WIDTH;
+        ctx.stroke();
+    }
+}
+
+export default { ...spriteData, draw };
