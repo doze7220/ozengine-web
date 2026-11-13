@@ -186,6 +186,21 @@ function readFadeSeconds(options, apiName) {
 }
 
 /**
+ * options から rate（再生速度）を検証する。
+ * @param {{ rate?: number } | undefined} options 指定オプション
+ * @param {string} apiName エラー文面に使うAPI名
+ * @returns {number} 再生速度（省略時は 1）
+ */
+function readRate(options, apiName) {
+  const rate = options?.rate;
+  if (rate === undefined) return 1;
+  if (typeof rate !== 'number' || !Number.isFinite(rate) || rate <= 0) {
+    throw new RangeError(`[oz] ${apiName}: rate は0より大きい有限数で指定してください: ${String(rate)}`);
+  }
+  return rate;
+}
+
+/**
  * 記録から曲の現在のレベル（0〜1）を直線の式で計算する。
  * @param {BgmVoice} voice 曲の情報
  * @param {number} now context.currentTime
@@ -263,15 +278,19 @@ export const Sound = {
    * SE を1回鳴らす。同じ SE を重ねて鳴らせる。最初の入力より前と、
    * ブラウザが音を止めている間は何もしない。
    * @param {string} name Assets.load の sounds に書いた名前
+   * @param {{ rate?: number }} [options] rate: 再生速度（既定値 1。音程と長さが一緒に変わる。2 で1オクターブ上、長さは半分）
    * @returns {void}
+   * @throws {RangeError} rate が0より大きい有限数でない場合（音は鳴らさない）
    */
-  playSe(name) {
+  playSe(name, options) {
+    const rate = readRate(options, 'Sound.playSe');
     const buffer = requireSound(name, 'Sound.playSe');
     if (buffer === null) return;
     if (!inputSeen) return;
     if (wasRunning && context.state !== 'running') return;
     const source = context.createBufferSource();
     source.buffer = buffer;
+    source.playbackRate.value = rate;
     source.connect(seGain);
     source.onended = () => source.disconnect();
     source.start();
