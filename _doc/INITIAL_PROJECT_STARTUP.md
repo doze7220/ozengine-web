@@ -24,7 +24,7 @@
 [Step 4: 運用ファイルの初期化（PROJECT_MILESTONE.md / COWORK_STATUS.md）→ 初回コミット]
       │
       ▼
-[Step 5: Phase 1 の親セッション開始（スキル oz-dir-session）]
+[Step 5: Phase 1 のリード設計セッション開始（スキル oz-dir-session）]
 ```
 
 立ち上げセッション自体は Phase に属さない。Step 4 のコミットで終了し、Step 5 は**新しいセッション**で始める（立ち上げ時の会話を Phase に持ち込まないため）。
