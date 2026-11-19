@@ -80,7 +80,7 @@ ozengine-web/
 | `destroy()` | シーンがスタックから外れたとき（1回） |
 
 #### 2.4 時間（`time`）
-phaseout の3系統を引き継ぐ。単位はすべてミリ秒。
+単位はすべてミリ秒。
 
 | 値 | 内容 |
 | --- | --- |
@@ -109,8 +109,8 @@ phaseout の3系統を引き継ぐ。単位はすべてミリ秒。
 * **シーン切り替え直後の時間スパイクを防ぐ:** シーン操作（切り替え、積む、戻す）があったら蓄積を捨て、次のフレームの `realDelta` を蓄積に入れない。ティックの中で操作が起きたら、そのフレームの残りのティックを回さない。入力の配信（手順2）の中で操作が起きたら、そのフレームのティックを回さない。そのフレームの残りの入力は、新しい最前面のシーンへ配る。ティックの外（タイマーなど）で操作が起きたら、次のフレームの先頭（手順1の前）で検知するので、そのフレームの `realDelta` を蓄積に入れず、ティックも回らない。
 * **「押した瞬間」の入力を取りこぼさない:** 入力は毎フレーム配るので、ティックが0回のフレームでも届く。押してから離すまでが1フレームより短いキーも、`onKeyDown` を呼び、そのフレームの間は `isKeyDown` を `true` にして、次のフレームで `false` にする。
 * **ブラウザのイベントの中ではシーンの処理を呼ばない:** `onPointer`・`onKeyDown`・`onPress` は手順2の中からだけ呼ぶ。
-* **音声の自動再生制限:** 入力の配信はフレームの中なので、そこからは自動再生制限を解除できない。`Sound` は自分で `window` に `pointerdown`・`pointerup`・`keydown` を capture で登録し、そのイベントの中で直接 `AudioContext.resume()` を呼ぶ（`Input` を経由しない）。イベントの中では `resume()` の呼び出しと入力の記録だけを行い、シーンの処理を呼ばない。`Escape` の `keydown` は入力に数えない。入力があり AudioContext が `running` になったら登録を解除する。ブラウザが AudioContext を止めたら（`statechange` で `running` でも `closed` でもなくなったら。iOS の Safari の `interrupted` を含む）登録し直し、次の入力で再開する。入力のイベントの外では `resume()` を呼ばない。一度 `running` になったあとで止まっている間の SE は捨て、BGM の操作は受け付ける（再開後に鳴る）。最初の入力より前の再生の要求は捨てる。
-* **Canvas の画素数:** `Screen` が、表示の大きさ（CSS の画素数）× `devicePixelRatio`（上限 2、使えない値なら 1）を四捨五入した値（1 以上）にし、`resize` で追従させる。論理解像度とは一致しない。倍率は利用側に公開しない。シーンの座標は論理座標のまま。Phase 04（キャンバスキャッシュ）で焼き付ける解像度を決める前提になる。
+* **音声の自動再生制限:** 入力の配信はフレームの中なので、そこからは自動再生制限を解除できない。`Sound` は自分で `window` に `pointerdown`・`pointerup`・`keydown` を capture で登録し、そのイベントの中で直接 `AudioContext.resume()` を呼ぶ（`Input` を経由しない）。イベントの中では `resume()` の呼び出しと入力の記録だけを行い、シーンの処理を呼ばない。入力があり AudioContext が `running` になったら登録を解除する。ブラウザが AudioContext を止めたら（`statechange` で `running` でも `closed` でもなくなったら。iOS の Safari の `interrupted` を含む）登録し直し、次の入力で再開する。入力のイベントの外では `resume()` を呼ばない。入力に数えるキー、止まっている間と最初の入力より前の再生の要求の扱いは `oz/ENGINE_API.md` 21章を参照。
+* **Canvas の画素数:** `Screen` が、表示の大きさ（CSS の画素数）× `devicePixelRatio`（上限 2、使えない値なら 1）を四捨五入した値（1 以上）にし、`resize` で追従させる。論理解像度とは一致しない。倍率は利用側に公開しない。シーンの座標は論理座標のまま。
 * **音の時刻:** フェードと停止の予定には `AudioContext.currentTime` を使う。これは憲法3章「時間の受け渡し」に明記された例外である。音は `timeScale` と無関係に実時間で進む。
 
 `Engine` が各モジュールを生成する（`Layers` と `DebugOverlay` には、起動設定の `width`・`height` を論理解像度として渡す）。`Time`・`Scenes`・`Layers`・`Input`・`DebugOverlay` のインスタンスを `GameLoop` へ、`Screen`・`Scenes`・`Buttons` のインスタンスに加え、`Keys`・`VirtualPads` を `Input` へ、`VirtualPad` を `VirtualPads` へ引数で渡すので、`GameLoop` と `Input` と `VirtualPads` はこれらを import しない。`Scenes` と `Layers` も互いを import しない。
@@ -156,7 +156,7 @@ Scene・GameLoop・Time・Screen・Scenes・Layers・Input・Buttons・Keys・Vi
 | **js/ui/** | バーチャルパッドの定義（配置、キーの割り当て、画像のファイル名）、画像の読み込みと描画 | ゲーム進行、目印の付いたコードの import |
 | **js/effect/** | 星、トレイルなどの演出の更新と描画 | ゲーム進行に影響する処理 |
 | **js/entities/** | 位置や状態の保持、動きの更新、自動操縦 | 描画命令の直書き（描画はスプライトや `effect/` に任せる） |
-| **assets/sprites/*.js** | 見た目の描画（`oz/ENGINE_API.md` 23章の約束）。`ship.js` は OZ Vector Editor の書き出しファイルで、手で編集しない（エディタの着色の Phase で塗りを書き出せるようになったので、手書きのつなぎのスプライトから差し替えた） | 位置や動き、外部への依存（組み立て用のJSがパーツのスプライトJSを `import` することを除く） |
+| **assets/sprites/*.js** | 見た目の描画（`oz/ENGINE_API.md` 23章の約束）。`ship.js` は OZ Vector Editor の書き出しファイルで、手で編集しない | 位置や動き、外部への依存（組み立て用のJSがパーツのスプライトJSを `import` することを除く） |
 
 **エンジンに入れないもの:** スプライトの描画処理、アニメーション、カメラ、当たり判定、物理、パーティクル、Entity基底クラス、遷移演出、タブやスクロールなどのUI部品。必要になったPhaseで、発注者の承認を得てから検討する（憲法3章「先回り実装の禁止」）。
 

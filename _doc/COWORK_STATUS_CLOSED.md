@@ -79,3 +79,10 @@
 
 #### マイルストーンのエディタの Phase の呼び方（2026-11-13）
 * **`_doc/PROJECT_MILESTONE.md` のエディタの Phase の番号:** リード設計のセッションで、「エディタの P5」「エディタの P7」を名前（着色の Phase、アニメーションエディタモードの Phase）に直し、差し替えの済んだ「エディタの P5（塗り）の後」の節を消した。機能バックログの冒頭に、エディタの Phase は名前で書くことを書き足した（発端の RES: `./_log/res/261112_2133_RES_Interrupt_機体のスプライトをエディタの書き出しに差し替える.md`）。
+
+#### Interrupt SE の再生速度（2026-11-13）
+* **`Sound.playSe` の再生速度 `rate`:** 第2引数 `{ rate }`（既定値 `1`、0 より大きい有限数以外は `RangeError`）を足し、`oz/ENGINE_API.md` 21章に書いた。値の検証はブラウザのコンソールで、音程の変化は発注者が耳で確かめた。`PROJECT_ARCHITECTURE.md` の `Sound` の責務（SEの再生）は変わらないので直していない。自動テストが無い件は `COWORK_STATUS.md` 3章の `Sound` の項に残っている（RES: `./_log/res/261113_2321_RES_Interrupt_SEの再生速度を指定できるようにする.md`）。
+
+#### Phase 03 → 04 の棚卸し（2026-11-19、発注者の判断）
+* **`PROJECT_ARCHITECTURE.md` のスリムアップ:** 2.4章の元にした別プロジェクト（phaseout）への言及、3章「Canvas の画素数」の Phase 04 への申し送り（`COWORK_STATUS.md` 2章と重複）、4章 `ship.js` の行の差し替えの経緯を削った。3章「音声の自動再生制限」のうち、ゲームから見た振る舞い（入力に数えるキー、止まっている間と最初の入力より前の再生の要求の扱い）は `oz/ENGINE_API.md` 21章への参照に置き換えた。仕様は変えていない。
+* **ログのパス:** 移動後のパスに直したのは `COWORK_STATUS.md` の中だけで、本ファイルと RES の中の記載は直していない（`_doc/PROJECT_PHASE_TRANSITION_CLEANUP.md` 4章）。
