@@ -20,10 +20,6 @@ const LABEL_ALIGN = 'right';
 const MUTE_TEXT = 'ミュート中';
 /** スロー中の表示文字 */
 const SLOW_TEXT = 'スロー';
-/** 焼き付けが ON のときの表示文字（見比べ用の一時的な切り替え。テストプレイの後に消す） */
-const BAKE_ON_TEXT = '焼き付け: ON';
-/** 焼き付けが OFF のときの表示文字（見比べ用の一時的な切り替え。テストプレイの後に消す） */
-const BAKE_OFF_TEXT = '焼き付け: OFF';
 
 /**
  * @typedef {{ width: number, height: number }} Screen 解像度
@@ -86,15 +82,4 @@ export function drawMuteLabel(ctx, screen) {
  */
 export function drawSlowLabel(ctx, screen) {
   drawLabel(ctx, screen, SLOW_TEXT, 1);
-}
-
-/**
- * 右上の3行目に焼き付けの見比べの状態を描く（見比べ用の一時的な表示。テストプレイの後に消す）。
- * @param {CanvasRenderingContext2D} ctx 描画先
- * @param {Screen} screen 解像度
- * @param {boolean} baked 焼き付けで描いているなら true
- * @returns {void}
- */
-export function drawBakeLabel(ctx, screen, baked) {
-  drawLabel(ctx, screen, baked ? BAKE_ON_TEXT : BAKE_OFF_TEXT, 2);
 }
