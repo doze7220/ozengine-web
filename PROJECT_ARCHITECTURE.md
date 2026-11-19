@@ -111,17 +111,18 @@ ozengine-web/
 * **ブラウザのイベントの中ではシーンの処理を呼ばない:** `onPointer`・`onKeyDown`・`onPress` は手順2の中からだけ呼ぶ。
 * **音声の自動再生制限:** 入力の配信はフレームの中なので、そこからは自動再生制限を解除できない。`Sound` は自分で `window` に `pointerdown`・`pointerup`・`keydown` を capture で登録し、そのイベントの中で直接 `AudioContext.resume()` を呼ぶ（`Input` を経由しない）。イベントの中では `resume()` の呼び出しと入力の記録だけを行い、シーンの処理を呼ばない。入力があり AudioContext が `running` になったら登録を解除する。ブラウザが AudioContext を止めたら（`statechange` で `running` でも `closed` でもなくなったら。iOS の Safari の `interrupted` を含む）登録し直し、次の入力で再開する。入力のイベントの外では `resume()` を呼ばない。入力に数えるキー、止まっている間と最初の入力より前の再生の要求の扱いは `oz/ENGINE_API.md` 21章を参照。
 * **Canvas の画素数:** `Screen` が、表示の大きさ（CSS の画素数）× `devicePixelRatio`（上限 2、使えない値なら 1）を四捨五入した値（1 以上）にし、`resize` で追従させる。論理解像度とは一致しない。倍率は利用側に公開しない。シーンの座標は論理座標のまま。
+* **キャンバスキャッシュの焼き直し:** `CanvasCache` は焼き付けを描くときに、今の画素の倍率を焼いたときの倍率と比べ、違えばその場で焼き直してから描く（`Screen` から通知は受けない。描かれていない焼き付けは次に描くときに焼き直す）。倍率は利用側に公開しない。
 * **音の時刻:** フェードと停止の予定には `AudioContext.currentTime` を使う。これは憲法3章「時間の受け渡し」に明記された例外である。音は `timeScale` と無関係に実時間で進む。
 
-`Engine` が各モジュールを生成する（`Layers` と `DebugOverlay` には、起動設定の `width`・`height` を論理解像度として渡す）。`Time`・`Scenes`・`Layers`・`Input`・`DebugOverlay` のインスタンスを `GameLoop` へ、`Screen`・`Scenes`・`Buttons` のインスタンスに加え、`Keys`・`VirtualPads` を `Input` へ、`VirtualPad` を `VirtualPads` へ引数で渡すので、`GameLoop` と `Input` と `VirtualPads` はこれらを import しない。`Scenes` と `Layers` も互いを import しない。
+`Engine` が各モジュールを生成する（`Layers` と `DebugOverlay` には、起動設定の `width`・`height` を論理解像度として渡す）。`Time`・`Scenes`・`Layers`・`Input`・`DebugOverlay` のインスタンスを `GameLoop` へ、`Screen`・`Scenes`・`Buttons` のインスタンスに加え、`Keys`・`VirtualPads` を `Input` へ、`VirtualPad` を `VirtualPads` へ引数で渡すので、`GameLoop` と `Input` と `VirtualPads` はこれらを import しない。`Scenes` と `Layers` も互いを import しない。`Engine` は起動時（最初のシーンを積む前）に、画素の倍率（Canvas の画素数 ÷ 論理解像度）の求め方を関数として `CanvasCache` へ渡すので、`CanvasCache` は `Screen` を import せず、`Screen` も `CanvasCache` を知らない。
 
 依存の向きは次のとおりで、逆向きの import を禁止する。
 
 ```
-利用側の js/ → oz/index.js → Engine / Scene / Assets / Sound / Storage
-Engine → Scene / GameLoop / Time / Screen / Scenes / Layers / Input / Buttons / Keys / VirtualPad / VirtualPads / DebugOverlay
+利用側の js/ → oz/index.js → Engine / Scene / Assets / Sound / Storage / CanvasCache
+Engine → Scene / GameLoop / Time / Screen / Scenes / Layers / Input / Buttons / Keys / VirtualPad / VirtualPads / DebugOverlay / CanvasCache
 
-Scene・GameLoop・Time・Screen・Scenes・Layers・Input・Buttons・Keys・VirtualPad・VirtualPads・DebugOverlay・Sound・Storage は他のエンジンモジュールに依存しない。
+Scene・GameLoop・Time・Screen・Scenes・Layers・Input・Buttons・Keys・VirtualPad・VirtualPads・DebugOverlay・Sound・Storage・CanvasCache は他のエンジンモジュールに依存しない。
 例外: Assets → Sound（音声のデコードと、名前で預けるため）。
 ```
 
@@ -135,7 +136,7 @@ Scene・GameLoop・Time・Screen・Scenes・Layers・Input・Buttons・Keys・Vi
 | モジュール | 書いてよいこと | 書いたら責務違反になること |
 | --- | --- | --- |
 | **index.js**（`oz/` 直下） | 公開APIの再export | 処理そのもの |
-| **Engine** | 起動設定の受け取りと各モジュールの初期化、公開操作（シーン操作、`timeScale`、ボタンの登録、バーチャルパッドの登録と状態の取得、キーの状態の取得）の各モジュールへの委譲 | ゲームループの中身、描画処理 |
+| **Engine** | 起動設定の受け取りと各モジュールの初期化、公開操作（シーン操作、`timeScale`、ボタンの登録、バーチャルパッドの登録と状態の取得、キーの状態の取得）の各モジュールへの委譲、起動時の `CanvasCache` への画素の倍率の求め方の受け渡し | ゲームループの中身、描画処理、焼き付けの処理 |
 | **GameLoop** | `requestAnimationFrame` の管理、3章の順序の呼び出し | 時間計算の詳細、ゲーム固有の処理 |
 | **Time** | `realDelta`・`gameTime`・`timeScale` の管理、固定ティックの蓄積 | 入力、描画 |
 | **Screen** | 論理解像度の保持、スクリーン座標と論理座標の変換、Canvas の表示サイズの調整（縦横比を保ってウィンドウに合わせる）、Canvas の画素数の調整（表示サイズ × `devicePixelRatio`、上限 2） | 描画、入力の配信、`ctx` の操作 |
@@ -147,7 +148,8 @@ Scene・GameLoop・Time・Screen・Scenes・Layers・Input・Buttons・Keys・Vi
 | **VirtualPad** | 1つのパッドの配置の検証、当たり判定、指ごとの押下状態、キーへの変換、つまみの位置、描画用の状態の写し | 描画、画像の読み込み、配置やキー割り当ての既定値、`window` への依存 |
 | **VirtualPads** | シーンごとのパッドの登録、指で触れたかの記録、最前面のシーンのパッドへのタッチの振り分け、パッドのキーの変化を入力の列に差し込むこと | 当たり判定の中身、キーの確定、配信 |
 | **Buttons** | シーンごとのボタン矩形の登録と当たり判定 | ボタンの描画、タブやスクロールなどのUI部品 |
-| **Assets** | 一覧に基づく画像と音声のロード、取得、読み込みに失敗したときの代替（透明な画像、警告） | スプライトJSの読み込み（`import` で行う）、キャッシュ生成、音の再生 |
+| **Assets** | 一覧に基づく画像と音声のロード、取得、読み込みに失敗したときの代替（透明な画像、警告） | スプライトJSの読み込み（`import` で行う）、キャッシュ生成（`CanvasCache` が担う）、音の再生 |
+| **CanvasCache** | `create` の引数の検証、渡された描く処理の、ページに追加しない Canvas への焼き付け（範囲・`scale`・画素の倍率からの画素数と余白の計算を含む）、焼き付けた画像の描画（画面の画素への位置合わせを含む）、画素の倍率が変わったときの焼き直し、`refresh` による焼き直し、`dispose` による手放し | 絵の中身の解釈（`source` の `draw` 以外のキーの読み取り（範囲は `options.bounds` だけから受け取る）、描く処理の中身に応じた分岐）、画素の加工（`getImageData` などによる色の差し替え）、複数の絵を1枚にまとめること（アトラス）、時間で変わる絵の焼き付け、表示サイズ・画素数の調整（`Screen` の責務）、他のエンジンモジュールの import、画素の倍率の公開、ページへの要素の追加 |
 | **Sound** | AudioContext の管理（最初の入力と、ブラウザが止めたあとの入力での再開を含む）、音声のデコードと名前での保持、SEとBGMの再生、フェード、音量 | BGMの状態遷移（ピンチなどの判定はゲーム側）、ファイルの読み込み |
 | **Storage** | 単一JSONの保存と読み込み、版番号が違うときの既定値への初期化、`localStorage` が使えないときのメモリ上での継続 | セーブ内容の定義、移行処理 |
 | **DebugOverlay** | FPSの計算と表示（表示の `save` / `restore` の中での論理座標への拡大の設定を含む） | ゲーム状態の参照 |
@@ -158,7 +160,7 @@ Scene・GameLoop・Time・Screen・Scenes・Layers・Input・Buttons・Keys・Vi
 | **js/entities/** | 位置や状態の保持、動きの更新、自動操縦 | 描画命令の直書き（描画はスプライトや `effect/` に任せる） |
 | **assets/sprites/*.js** | 見た目の描画（`oz/ENGINE_API.md` 23章の約束）。`ship.js` は OZ Vector Editor の書き出しファイルで、手で編集しない | 位置や動き、外部への依存（組み立て用のJSがパーツのスプライトJSを `import` することを除く） |
 
-**エンジンに入れないもの:** スプライトの描画処理、アニメーション、カメラ、当たり判定、物理、パーティクル、Entity基底クラス、遷移演出、タブやスクロールなどのUI部品。必要になったPhaseで、発注者の承認を得てから検討する（憲法3章「先回り実装の禁止」）。
+**エンジンに入れないもの:** スプライトの描画処理（絵の中身を描くこと。`CanvasCache` は渡された描く処理を呼んで焼き付けるだけで、これと両立する）、アニメーション、カメラ、当たり判定、物理、パーティクル、Entity基底クラス、遷移演出、タブやスクロールなどのUI部品。必要になったPhaseで、発注者の承認を得てから検討する（憲法3章「先回り実装の禁止」）。
 
 **自動テスト（`test/`）の規則:**
 
@@ -166,7 +168,7 @@ Scene・GameLoop・Time・Screen・Scenes・Layers・Input・Buttons・Keys・Vi
 * **置き場所と命名:** `test/<対象モジュール名>[.<観点>].test.js`（対象がモジュールでない場合は、対象のファイルの名前を使う。指紋一覧は `test/FINGERPRINTS.test.js`）。`test/` にはテスト以外の `.js`（共有の補助モジュールを含む）を置かず、補助関数は各テストファイルの中に書く。`node --test` は既定のパターンに合うファイルをすべて実行するので、そのパターンに合う名前（`*.test.js`・`*-test.js`・`*_test.js`・`test-*.js`・`test.js`）を `test/` の外のファイルに付けてはならない。
 * **import の規則:** 対象を `oz/src/` から相対パスで直接 import し、`oz/index.js` は import しない。公開されたものだけを通して確かめ、テストのためにソースを変えない。依存は `test/ → oz/src/` の一方向で、`oz/`・`js/`・`assets/`・`index.html` は `test/` を参照しない。指紋一覧のテストは `oz/src/` を import せず、`oz/` 以下のファイルをデータとして読む（`oz/` のパスは `import.meta.url` から求める）。
 * **偽の `window`:** テストファイル内の素のオブジェクトで作り、`globalThis.window` に置いた場合はテストの終了時に（`t.after` で）元に戻す。`window` 以外のグローバルには代入しない。`t.after` は登録した順に動くため、1つのテスト（`t`）で偽の `window` を置くのは1回だけにし、ケースを繰り返すときはサブテストに分ける。`console.warn` は `t.mock.method` で抑止する。状態を持つ `Storage` は、クエリ付きの動的 import でテストごとに読み込み直す。
-* **対象:** `Time`・`Scenes`・`Screen`・`Storage`・`Keys`・`VirtualPad`・`VirtualPads`（`Keys`・`VirtualPad`・`VirtualPads` は `window` を使わない）、指紋一覧（`oz/FINGERPRINTS.txt` が `oz/` の中身と一致すること）。テストしないモジュール: `Scene`・`Input`・`Sound`・`Assets`・`Layers`・`GameLoop`・`DebugOverlay`・`Engine`・`Buttons`（`Sound` は読み込み時に `window` を使うため、対象にするときに登録の時期を検討する）。
+* **対象:** `Time`・`Scenes`・`Screen`・`Storage`・`Keys`・`VirtualPad`・`VirtualPads`（`Keys`・`VirtualPad`・`VirtualPads` は `window` を使わない）、`CanvasCache`（Canvas を使わない部分: 引数の検証、画素数と余白の計算、画素合わせの判定、起動前のエラー。焼き付けと描画、自動の焼き直しはテストしない。`window` を使わない）、指紋一覧（`oz/FINGERPRINTS.txt` が `oz/` の中身と一致すること）。テストしないモジュール: `Scene`・`Input`・`Sound`・`Assets`・`Layers`・`GameLoop`・`DebugOverlay`・`Engine`・`Buttons`（`Sound` は読み込み時に `window` を使うため、対象にするときに登録の時期を検討する）。
 
 **指紋一覧（`oz/FINGERPRINTS.txt`）の規則:**
 
