@@ -103,3 +103,7 @@
 
 **持ち越し（`COWORK_STATUS.md` 3章）**
 * Canvas の大きさ・メモリの上限、エディタの `bounds` と `miter` の角、`options` の知らない項目の扱いは引き続き残す。多数を描いたときに軽くなるか・画素合わせの段差を新たに足した。
+
+#### Phase 04 → 05 の棚卸し（2026-11-19）
+* **ログの移動:** Phase 04 の DIR・REQ・RES を `_log/dir/closed/`・`_log/req/closed/`・`_log/res/closed/` へ移した。移動後のパスに直したのは `COWORK_STATUS.md` の中だけ（`_doc/PROJECT_PHASE_TRANSITION_CLEANUP.md` 4章）。
+* **`PROJECT_ARCHITECTURE.md`:** Phase 04 で足した記載（3章「キャンバスキャッシュの焼き直し」、依存関係、4章の `CanvasCache` の行、2.1章の土台の機体の焼き付け）を実コードと照らして監査した。コードを追う記述・比喩・重複は無く、削る所は無かった。
