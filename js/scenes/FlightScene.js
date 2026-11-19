@@ -1,5 +1,5 @@
 /**
- * 責務: タイトルとプレイに共通の、機体・星・トレイル・風の保持と更新と描画（機体の焼き付けの作成と手放しを含む）、カメラ、ミュートキー。
+ * 責務: タイトルとプレイに共通の、機体・星・トレイル・風の保持と更新と描画（機体の焼き付けの作成と手放しを含む）、カメラ、ミュートキー、焼き付けの見比べの切り替えキー（一時的）。
  */
 /* ozengine sample */
 import { CanvasCache, Scene } from 'oz';
@@ -9,7 +9,9 @@ import { Stars } from '../effect/Stars.js';
 import { Trail } from '../effect/Trail.js';
 import { Wind } from '../effect/Wind.js';
 import { toggleMute } from './mute.js';
-import { drawMuteLabel } from './uiText.js';
+// 見比べ用の一時的な切り替え（テストプレイの後に消す）
+import { isBaked, toggleBaked } from './bakeToggle.js';
+import { drawMuteLabel, drawBakeLabel } from './uiText.js';
 
 /**
  * @typedef {{ width: number, height: number }} Screen 解像度
@@ -23,6 +25,8 @@ import { drawMuteLabel } from './uiText.js';
 
 /** ミュートを切り替えるキー */
 const MUTE_KEY = 'KeyM';
+/** 焼き付けと直接描くを切り替えるキー（見比べ用の一時的な切り替え。テストプレイの後に消す） */
+const BAKE_KEY = 'KeyB';
 
 /** タイトルとプレイの共通の基底クラス */
 export class FlightScene extends Scene {
@@ -103,12 +107,13 @@ export class FlightScene extends Scene {
   }
 
   /**
-   * ミュートキーでミュートを切り替える。
+   * ミュートキーでミュートを、B キーで焼き付けの見比べ（一時的）を切り替える。
    * @param {string} code 押されたキーのコード
    * @returns {void}
    */
   onKeyDown(code) {
     if (code === MUTE_KEY) toggleMute();
+    if (code === BAKE_KEY) toggleBaked();
   }
 
   /**
@@ -134,12 +139,13 @@ export class FlightScene extends Scene {
         break;
       case 'ui':
         drawMuteLabel(ctx, this.screen);
+        drawBakeLabel(ctx, this.screen, isBaked());
         break;
     }
   }
 
   /**
-   * 機体の焼き付けを位置と向きを設定して描く。
+   * 機体を位置と向きを設定して描く。見比べ用の切り替え（一時的）が ON なら焼き付けで、OFF なら直接描く。
    * @param {CanvasRenderingContext2D} ctx 描画先
    * @param {Camera} camera カメラ
    * @returns {void}
@@ -148,7 +154,9 @@ export class FlightScene extends Scene {
     ctx.save();
     ctx.translate(camera.x + this.ship.x, camera.y + this.ship.y);
     ctx.rotate(this.ship.angle);
-    this.shipImage.draw(ctx);
+    // 見比べ用の一時的な分岐（テストプレイの後に消す）
+    if (isBaked()) this.shipImage.draw(ctx);
+    else shipSprite.draw(ctx);
     ctx.restore();
   }
 }
