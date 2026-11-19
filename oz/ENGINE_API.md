@@ -4,10 +4,10 @@
 
 ## 1. 概要と使えるもの
 
-利用側が使えるのは次の5つだけである。
+利用側が使えるのは次の6つだけである。
 
 ```js
-import { Engine, Scene, Assets, Sound, Storage } from 'oz';
+import { Engine, Scene, Assets, Sound, Storage, CanvasCache } from 'oz';
 ```
 
 * `Engine` : 起動、シーンの操作、`timeScale` の読み書き、ボタンの登録、キーの状態の取得、バーチャルパッドの登録と状態の取得
@@ -15,6 +15,7 @@ import { Engine, Scene, Assets, Sound, Storage } from 'oz';
 * `Assets` : 画像と音声のロードと取得
 * `Sound` : 音の再生と音量
 * `Storage` : 設定の保存
+* `CanvasCache` : 描く処理の焼き付け（25章）
 
 ブラウザの Canvas 2D と ES Modules で動く。ビルドは不要だが、実行には静的サーバが必要である（`file://` では ES Modules が動かない）。
 
@@ -227,6 +228,7 @@ Engine.timeScale = 0.5; // 半分の速さ
 * `Assets.load` は、ファイルの読み込みに失敗しても警告を出して続行する（20章）。
 * `Sound.playSe`・`Sound.playBgm` のエラー（一覧にない名前など。21章）をフレーム処理の中で起こすと、シーンのメソッドの例外と同じくループが止まる。
 * `Storage` のエラー（`open` の前の `get`・`set`、`defaults` にない名前、JSON にできない値など。22章）をフレーム処理の中で起こすと、シーンのメソッドの例外と同じくループが止まる。
+* `CanvasCache` のエラー（引数の誤り、手放した焼き付けの使用など。25章）や、焼き付けの途中で描く処理が投げた例外をフレーム処理の中で起こすと、シーンのメソッドの例外と同じくループが止まる。
 
 ## 16. ポインタ入力
 
@@ -604,7 +606,7 @@ class SettingsScene extends Scene {
 import player from 'assets/sprites/player.js';
 ```
 
-* `draw` 以外のキー（エディタの書き出しに入る `format`・`formatVersion`・`bounds`・`elements`・`source` など）は、エンジンも利用側も読まない。
+* エディタの書き出しの `bounds` は、キャンバスキャッシュ（25章）の範囲として読んでよい（図形が0個のときは `null`）。それ以外のキー（`format`・`formatVersion`・`elements`・`source` など）は、エンジンも利用側も読まない。
 * `draw(ctx)` は `ctx` の状態を元に戻して終わる。
 * スプライトは見た目だけを持つ。位置・HP・`update()` などの動きは、利用側のクラスが持つ。
 
@@ -814,3 +816,127 @@ class PlayScene extends Scene {
 * `Engine.start` の前に、4つの操作のどれかを使うとエラー（`[oz] <API名>: Engine.start の前には使えません`）。
 * `Engine.addVirtualPad` で、`scene` が `Scene` のインスタンスでない、`layout` が正しくない（`[oz] Engine.addVirtualPad:` で始まり、項目名を含む）、有効なときに同じシーンへ2回登録した、場合はエラー。
 * `Engine.virtualPadState` で、`scene` が `Scene` のインスタンスでないとエラー。
+
+## 25. キャンバスキャッシュ
+
+`CanvasCache` は、`draw(ctx)` で描けるもの（スプライトJS、図形、文字）を、前もってページに追加しない Canvas に焼き付けておき、毎フレームはその画像を貼るだけにする。多数のスプライトを同時に描くときの、毎フレームのベクターの描画の負荷を減らすためのものである。
+
+焼き付けた結果は `draw(ctx)` を持つオブジェクト（以下「焼き付け」）として返るので、スプライトJSと同じ書き方で描ける。エンジンは描く処理を呼ぶだけで、絵の中身を知らない。
+
+```js
+import { Scene, CanvasCache } from 'oz';
+```
+
+### `CanvasCache.create(source, options)`
+
+| 引数 | 必須 | 既定値 | 内容 |
+| --- | --- | --- | --- |
+| `source` | 必須 | なし | 描く処理。関数なら `source(ctx)`、そうでなければ `source.draw(ctx)` として呼ぶ |
+| `options.bounds` | 必須 | なし | 焼き付ける範囲 `{ minX, minY, maxX, maxY }`（有限の数値で、`maxX > minX`、`maxY > minY`） |
+| `options.scale` | 任意 | `1` | 焼き付ける大きさの倍率（正の有限数） |
+
+* `bounds` は `source` の座標（拡大前の px）での最小・最大である。OZ Vector Editor の書き出しの `bounds` と同じ形で、スプライトJSなら `sprite.bounds` をそのまま渡せる（線の太さの半分を含む）。`bounds` を持たない描く処理では、呼ぶ側が同じ形で書き、線の太さや影を含める。
+* `bounds` と `scale` は `create` のときに決まり、後から変えられない（`bounds` は値を写して持つので、元のオブジェクトを書き換えても変わらない）。
+* `options` のほかの項目は読まない。
+* 戻り値は焼き付けで、`draw(ctx)`・`refresh()`・`dispose()` だけを持つ。
+
+### 描く処理に渡される ctx
+`source` に渡す `ctx` は、焼き付けのたびに初期状態で、焼き付け用の変換（`bounds`・`scale`・画素の細かさに合わせたもの）は設定済みである。`source` は変換を自分で設定しない。`source` が `ctx` の状態を戻さずに終わっても、例外を投げても、その状態は次の焼き付けに持ち越されない。
+
+### 描かれる位置と大きさ
+焼き付けの `draw(ctx)` は、「`ctx.save()` → `ctx.scale(scale, scale)` → `source` を描く → `ctx.restore()`」と同じ位置・大きさに描く。呼ぶ側は `scale` を掛けない。
+
+* 呼ぶ側は `translate`・`rotate`・`scale` を掛けてから `draw(ctx)` を呼べる。`draw` は `ctx` の状態を元に戻して終わる。
+* 拡大・縮小・回転を掛けていないときは、画像の1画素を画面の1画素に合わせて描く（位置は画面の画素に丸められる）。
+* 回転したときは、画像の補間で描かれる（`imageSmoothingEnabled` はエンジンが変えない）。
+* `bounds` のすぐ外側は、線のにじみが欠けないように、エンジンがわずかな余白を取る。それより外は切れる。
+
+### 使い方の例
+スプライトJSの `bounds` を渡す例。
+
+```js
+import { Scene, CanvasCache } from 'oz';
+import player from 'assets/sprites/player.js';
+
+class PlayScene extends Scene {
+  init() {
+    this.playerImage = CanvasCache.create(player, { bounds: player.bounds });
+  }
+  draw(ctx, layer) {
+    if (layer !== 'main') return;
+    ctx.save();
+    ctx.translate(this.x, this.y);
+    ctx.rotate(this.angle);
+    this.playerImage.draw(ctx);
+    ctx.restore();
+  }
+  destroy() {
+    this.playerImage.dispose();
+  }
+}
+```
+
+手で範囲を書く例（関数で円と文字を描く。線の太さを含めた範囲を渡す）。
+
+```js
+import { Scene, CanvasCache } from 'oz';
+
+class BadgeScene extends Scene {
+  init() {
+    this.badge = CanvasCache.create((ctx) => {
+      ctx.lineWidth = 2;
+      ctx.strokeStyle = 'white';
+      ctx.beginPath();
+      ctx.arc(0, 0, 20, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.fillStyle = 'white';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText('A', 0, 0);
+    }, { bounds: { minX: -21, minY: -21, maxX: 21, maxY: 21 }, scale: 2 });
+  }
+  draw(ctx, layer) {
+    if (layer !== 'main') return;
+    ctx.save();
+    ctx.translate(100, 100);
+    this.badge.draw(ctx);
+    ctx.restore();
+  }
+  destroy() {
+    this.badge.dispose();
+  }
+}
+```
+
+### 自動の焼き直し
+焼き付ける画素数は、エンジンが `scale` と画面の画素の細かさから決める（呼ぶ側は画面の画素の倍率を知らなくてよく、知る方法もない）。ウィンドウの大きさや画面の向きなどが変わると、次にその焼き付けを描くときに、エンジンが焼き直す。同じオブジェクトをそのまま使える。その描画のときに描く処理が呼ばれる。
+
+### `refresh()`
+その時点の描く処理を呼び直して、焼き直す。色や演出を切り替えた後に呼ぶ。
+
+### `dispose()`
+焼き付けを手放す（画像を持たなくなり、焼き直しもされない）。シーンの `destroy` で呼ぶ。2回目以降は何もしない。手放した後の `draw`・`refresh` はエラーになる。
+
+### 作れる時期
+`Engine.start` の後。シーンの `init` で作り、`destroy` で手放す。焼き付けは `create` の中ですぐ行われる。
+
+### 注意
+* `scale` と大きく違う倍率（呼ぶ側の `ctx.scale` など）で描くと、拡大ではぼやけ、縮小では細い線が淡くなる。大きさを変えて描くなら、その大きさの `scale` で別に焼き付ける。
+* `bounds` の外は切れる。OZ Vector Editor の書き出しでも、尖った角の線（`miter`）がはみ出す部分は切れることがある。
+* 時間で変わる絵（アニメーション）は対象にしない。焼き付けた時点の見た目のまま描かれる。
+* 色違いが要るときは、色ごとに別の描く処理を渡して焼き付ける。見た目を変えたら `refresh()` を呼ぶ。
+* 文字を焼き付けるときは、Web フォントの読み込みが済んでから `create`（または `refresh()`）する。
+* 焼き付け1つにつき画像1枚分のメモリを使う。大きな範囲と大きな `scale` の組み合わせや、多数の焼き付けを持ち続けることは避け、使わなくなったら `dispose()` する（ブラウザ、特に iPhone の Safari には Canvas の大きさとメモリの上限がある）。
+
+### エラー
+* `Engine.start` の前に `create` を呼ぶとエラー（`[oz] CanvasCache.create: Engine.start の前には使えません`）。この判定は引数の検証より先に行う。
+* `create` の引数が正しくないとエラー（`[oz] CanvasCache.create:` で始まる）。上から順に調べ、最初に当たったものを投げる。
+  * `source` が関数でも、`draw` が関数のオブジェクトでもない（無い・`null` を含む）: `source (draw(ctx) を持つオブジェクト、または ctx を受け取る関数) が渡されていません`
+  * `options` が `null` でないオブジェクトでない（無いを含む）: `options (設定オブジェクト) が渡されていません`
+  * `bounds` が `null` でないオブジェクトでない（無い・`null` を含む）: `bounds (焼き付ける範囲 { minX, minY, maxX, maxY }) が渡されていません`
+  * 4つの値のどれかが有限の数値でない: `bounds の minX / minY / maxX / maxY は有限の数値で指定してください`
+  * `maxX <= minX` または `maxY <= minY`: `bounds の範囲が空です（maxX は minX より、maxY は minY より大きくしてください）`
+  * `scale` が `undefined` でなく、正の有限数でない: `scale は正の有限数で指定してください`
+* 焼き付け用の Canvas を用意できないとエラー（`[oz] CanvasCache.create: 焼き付け用の Canvas を用意できません`）。
+* 手放した後の `draw`・`refresh` はエラー（`[oz] 焼き付けの draw: dispose の後には使えません`、`[oz] 焼き付けの refresh: dispose の後には使えません`）。
+* 描く処理が投げた例外は、包み直さずそのまま伝わる。`create` の中なら焼き付けは返らない。`refresh()` や自動の焼き直し（`draw` の中）で投げたときは、その呼び出しから例外が出て、その焼き付けは次に描くときにもう一度焼き直される。フレーム処理の中で起きればループが止まる（15章）。

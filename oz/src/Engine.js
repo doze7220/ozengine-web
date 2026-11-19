@@ -1,6 +1,7 @@
 /**
  * @fileoverview 責務: 起動設定の受け取りと各モジュールの初期化、公開操作（シーン操作、timeScale、ボタンの登録、キーの状態の取得、
- * バーチャルパッドの登録と状態の取得）の各モジュールへの委譲。ゲームループの中身や描画処理は持たない。
+ * バーチャルパッドの登録と状態の取得）の各モジュールへの委譲、キャンバスキャッシュへの画素の倍率の求め方の受け渡し。
+ * ゲームループの中身や描画処理は持たない。
  */
 import { Scene } from './Scene.js';
 import { GameLoop } from './GameLoop.js';
@@ -14,6 +15,7 @@ import { Buttons } from './Buttons.js';
 import { Keys } from './Keys.js';
 import { VirtualPad, validatePadLayout } from './VirtualPad.js';
 import { VirtualPads } from './VirtualPads.js';
+import { setPixelRatioSource } from './CanvasCache.js';
 
 /** tickRate を省略したときの既定値。 */
 const DEFAULT_TICK_RATE = 60;
@@ -128,6 +130,8 @@ export const Engine = {
     validateConfig(config);
 
     const screen = new Screen(config.canvas, config.width, config.height);
+    // キャンバスキャッシュへ、画素の倍率（Canvas の画素数 ÷ 論理解像度）の求め方を渡す。Layers の拡大の変換と同じ式。
+    setPixelRatioSource(() => config.canvas.width / config.width, () => config.canvas.height / config.height);
     const ctx = config.canvas.getContext('2d');
     const newTime = new Time(config.tickRate === undefined ? DEFAULT_TICK_RATE : config.tickRate);
     const newScenes = new Scenes();
