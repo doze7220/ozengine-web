@@ -45,10 +45,11 @@ export class PlayScene extends FlightScene {
   }
 
   /**
-   * バーチャルパッドとメニューを開く画面のボタンを登録する。
+   * 基底クラスの init（機体の焼き付けの作成）を呼んでから、バーチャルパッドとメニューを開く画面のボタンを登録する。
    * @returns {void}
    */
   init() {
+    super.init();
     Engine.addVirtualPad(this, VIRTUAL_PAD_LAYOUT);
     Engine.addButton(this, { ...MENU_BUTTON, onPress: () => openPlayMenu(this.screen, this.backToTitle) });
   }

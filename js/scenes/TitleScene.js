@@ -70,10 +70,11 @@ export class TitleScene extends FlightScene {
   }
 
   /**
-   * スタートボタンを登録し、BGM を流し始める（boot 画面で最初の入力が済んでいるので、入力を待たない）。
+   * 基底クラスの init（機体の焼き付けの作成）を呼んでから、スタートボタンを登録し、BGM を流し始める（boot 画面で最初の入力が済んでいるので、入力を待たない）。
    * @returns {void}
    */
   init() {
+    super.init();
     Engine.addButton(this, { ...this.button, onPress: () => this.startPlay() });
     this.playBgm();
   }

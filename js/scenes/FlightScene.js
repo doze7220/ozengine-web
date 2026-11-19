@@ -1,8 +1,8 @@
 /**
- * 責務: タイトルとプレイに共通の、機体・星・トレイル・風の保持と更新と描画、カメラ、ミュートキー。
+ * 責務: タイトルとプレイに共通の、機体・星・トレイル・風の保持と更新と描画（機体の焼き付けの作成と手放しを含む）、カメラ、ミュートキー。
  */
 /* ozengine sample */
-import { Scene } from 'oz';
+import { CanvasCache, Scene } from 'oz';
 import shipSprite from 'assets/sprites/ship.js';
 import { Ship } from '../entities/Ship.js';
 import { Stars } from '../effect/Stars.js';
@@ -16,6 +16,9 @@ import { drawMuteLabel } from './uiText.js';
  */
 /**
  * @typedef {{ x: number, y: number }} Camera ワールド座標に足すと画面の座標になる値
+ */
+/**
+ * @typedef {{ draw: (ctx: CanvasRenderingContext2D) => void, refresh: () => void, dispose: () => void }} Baked 焼き付け（CanvasCache.create の戻り値）
  */
 
 /** ミュートを切り替えるキー */
@@ -38,6 +41,24 @@ export class FlightScene extends Scene {
     this.trail = new Trail();
     /** @type {Wind} 風 */
     this.wind = new Wind(screen);
+    /** @type {Baked | null} 機体の焼き付け。init で作り、destroy で手放す */
+    this.shipImage = null;
+  }
+
+  /**
+   * 機体の焼き付けを作る（範囲は ship.js の bounds、倍率は既定の 1）。派生クラスで init を書くときは先頭で super.init() を呼ぶこと。
+   * @returns {void}
+   */
+  init() {
+    this.shipImage = CanvasCache.create(shipSprite, { bounds: shipSprite.bounds });
+  }
+
+  /**
+   * 機体の焼き付けを手放す。派生クラスで destroy を書くときは super.destroy() を呼ぶこと。
+   * @returns {void}
+   */
+  destroy() {
+    this.shipImage.dispose();
   }
 
   /**
@@ -118,7 +139,7 @@ export class FlightScene extends Scene {
   }
 
   /**
-   * 機体のスプライトを位置と向きを設定して描く。
+   * 機体の焼き付けを位置と向きを設定して描く。
    * @param {CanvasRenderingContext2D} ctx 描画先
    * @param {Camera} camera カメラ
    * @returns {void}
@@ -127,7 +148,7 @@ export class FlightScene extends Scene {
     ctx.save();
     ctx.translate(camera.x + this.ship.x, camera.y + this.ship.y);
     ctx.rotate(this.ship.angle);
-    shipSprite.draw(ctx);
+    this.shipImage.draw(ctx);
     ctx.restore();
   }
 }
