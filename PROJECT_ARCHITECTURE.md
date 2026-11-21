@@ -116,15 +116,16 @@ ozengine-web/
 * **キャンバスキャッシュの焼き直し:** `CanvasCache` は焼き付けを描くときに、今の画素の倍率を焼いたときの倍率と比べ、違えばその場で焼き直してから描く（`Screen` から通知は受けない。描かれていない焼き付けは次に描くときに焼き直す）。倍率は利用側に公開しない。
 * **音の時刻:** フェードと停止の予定には `AudioContext.currentTime` を使う。これは憲法3章「時間の受け渡し」に明記された例外である。音は `timeScale` と無関係に実時間で進む。
 
-`Engine` が各モジュールを生成する（`Layers` と `DebugOverlay` には、起動設定の `width`・`height` を論理解像度として渡す）。`Engine` は `DebugOverlay` を起動設定の `debug` にかかわらず常に作り、`debug` を表示の有無の起動時の値として設定する（`GameLoop` へは常にインスタンスを渡す）。`Time`・`Scenes`・`Layers`・`Input`・`DebugOverlay` のインスタンスを `GameLoop` へ、`Screen`・`Scenes`・`Buttons` のインスタンスに加え、`Keys`・`VirtualPads` を `Input` へ、`VirtualPad` を `VirtualPads` へ引数で渡すので、`GameLoop` と `Input` と `VirtualPads` はこれらを import しない。`Scenes` と `Layers` も互いを import しない。`Engine` は起動時（最初のシーンを積む前）に、画素の倍率（Canvas の画素数 ÷ 論理解像度）の求め方を関数として `CanvasCache` へ渡すので、`CanvasCache` は `Screen` を import せず、`Screen` も `CanvasCache` を知らない。
+`Engine` が各モジュールを生成する（`Layers` と `DebugOverlay` には、起動設定の `width`・`height` を論理解像度として渡す）。`Engine` は `DebugOverlay` を起動設定の `debug` にかかわらず常に作り、`debug` を表示の有無の起動時の値として設定する（`GameLoop` へは常にインスタンスを渡す）。`Time`・`Scenes`・`Layers`・`Input`・`DebugOverlay` のインスタンスを `GameLoop` へ、`Screen`・`Scenes`・`Buttons` のインスタンスに加え、`Keys`・`VirtualPads` を `Input` へ、`VirtualPad` を `VirtualPads` へ引数で渡すので、`GameLoop` と `Input` と `VirtualPads` はこれらを import しない。`Scenes` と `Layers` も互いを import しない。`Engine` は起動時（最初のシーンを積む前）に、画素の倍率（Canvas の画素数 ÷ 論理解像度）の求め方を関数として `CanvasCache` へ渡すので、`CanvasCache` は `Screen` を import せず、`Screen` も `CanvasCache` を知らない。同じく起動時（最初のシーンを積む前）に、論理解像度（起動設定の `width`・`height`）を `Ui` へ渡す（`setUiScreenSize`）ので、`Ui` は `Engine`・`Screen` を import しない。窓（`Ui.createWindow` の戻り値）はシーンが持ち、ポインタはシーンの `onPointer` から窓へ渡される（`Input` は `Ui` を知らず、窓は `Engine.addButton` と入力の仕組みに登録されない）。
 
 依存の向きは次のとおりで、逆向きの import を禁止する。
 
 ```
-利用側の js/ → oz/index.js → Engine / Scene / Assets / Sound / Storage / CanvasCache
-Engine → Scene / GameLoop / Time / Screen / Scenes / Layers / Input / Buttons / Keys / VirtualPad / VirtualPads / DebugOverlay / CanvasCache
+利用側の js/ → oz/index.js → Engine / Scene / Assets / Sound / Storage / CanvasCache / Ui
+Engine → Scene / GameLoop / Time / Screen / Scenes / Layers / Input / Buttons / Keys / VirtualPad / VirtualPads / DebugOverlay / CanvasCache / Ui
 
 Scene・GameLoop・Time・Screen・Scenes・Layers・Input・Buttons・Keys・VirtualPad・VirtualPads・DebugOverlay・Sound・Storage・CanvasCache は他のエンジンモジュールに依存しない。
+UI 部品のファイル（Ui・UiWindow・UiButton・UiValue・UiSpec・UiRect・UiMetrics・UiRenderer・UiStandardLook）は、UI 部品のファイルどうし以外のエンジンモジュールに依存しない。中の向きは Ui → UiWindow・UiRenderer、UiWindow → UiSpec・UiMetrics・UiRect・UiButton・UiValue、UiButton・UiValue → UiSpec・UiMetrics・UiRect、UiRenderer → UiStandardLook。
 例外: Assets → Sound（音声のデコードと、名前で預けるため）。
 ```
 
@@ -138,7 +139,7 @@ Scene・GameLoop・Time・Screen・Scenes・Layers・Input・Buttons・Keys・Vi
 | モジュール | 書いてよいこと | 書いたら責務違反になること |
 | --- | --- | --- |
 | **index.js**（`oz/` 直下） | 公開APIの再export | 処理そのもの |
-| **Engine** | 起動設定の受け取りと各モジュールの初期化、公開操作（シーン操作、`timeScale`、ボタンの登録、バーチャルパッドの登録と状態の取得、キーの状態の取得、FPS の表示の有無と位置の読み書き（値の検証を含む）、FPS の値の読み取り）の各モジュールへの委譲、起動時の `CanvasCache` への画素の倍率の求め方の受け渡し | ゲームループの中身、描画処理、焼き付けの処理、FPS の計算 |
+| **Engine** | 起動設定の受け取りと各モジュールの初期化、公開操作（シーン操作、`timeScale`、ボタンの登録、バーチャルパッドの登録と状態の取得、キーの状態の取得、FPS の表示の有無と位置の読み書き（値の検証を含む）、FPS の値の読み取り）の各モジュールへの委譲、起動時の `CanvasCache` への画素の倍率の求め方の受け渡し、起動時の `Ui` への論理解像度の受け渡し | ゲームループの中身、描画処理、焼き付けの処理、FPS の計算、UI 部品の処理 |
 | **GameLoop** | `requestAnimationFrame` の管理、3章の順序の呼び出し | 時間計算の詳細、ゲーム固有の処理 |
 | **Time** | `realDelta`・`gameTime`・`timeScale` の管理、固定ティックの蓄積 | 入力、描画 |
 | **Screen** | 論理解像度の保持、スクリーン座標と論理座標の変換、Canvas の表示サイズの調整（縦横比を保ってウィンドウに合わせる）、Canvas の画素数の調整（表示サイズ × `devicePixelRatio`、上限 2） | 描画、入力の配信、`ctx` の操作 |
@@ -149,20 +150,29 @@ Scene・GameLoop・Time・Screen・Scenes・Layers・Input・Buttons・Keys・Vi
 | **Keys** | キーボードとパッドの入力元をまとめたキーの押下状態の確定、押した瞬間の判定 | イベントの受信、配信 |
 | **VirtualPad** | 1つのパッドの配置の検証、当たり判定、指ごとの押下状態、キーへの変換、つまみの位置、描画用の状態の写し | 描画、画像の読み込み、配置やキー割り当ての既定値、`window` への依存 |
 | **VirtualPads** | シーンごとのパッドの登録、指で触れたかの記録、最前面のシーンのパッドへのタッチの振り分け、パッドのキーの変化を入力の列に差し込むこと | 当たり判定の中身、キーの確定、配信 |
-| **Buttons** | シーンごとのボタン矩形の登録と当たり判定 | ボタンの描画、タブやスクロールなどのUI部品 |
+| **Buttons** | シーンごとのボタン矩形の登録と当たり判定 | ボタンの描画、UI 部品（`Ui` が担う） |
 | **Assets** | 一覧に基づく画像と音声のロード、取得、読み込みに失敗したときの代替（透明な画像、警告） | スプライトJSの読み込み（`import` で行う）、キャッシュ生成（`CanvasCache` が担う）、音の再生 |
 | **CanvasCache** | `create` の引数の検証、渡された描く処理の、ページに追加しない Canvas への焼き付け（範囲・`scale`・画素の倍率からの画素数と余白の計算を含む）、焼き付けた画像の描画（画面の画素への位置合わせを含む）、画素の倍率が変わったときの焼き直し、`refresh` による焼き直し、`dispose` による手放し | 絵の中身の解釈（`source` の `draw` 以外のキーの読み取り（範囲は `options.bounds` だけから受け取る）、描く処理の中身に応じた分岐）、画素の加工（`getImageData` などによる色の差し替え）、複数の絵を1枚にまとめること（アトラス）、時間で変わる絵の焼き付け、表示サイズ・画素数の調整（`Screen` の責務）、他のエンジンモジュールの import、画素の倍率の公開、ページへの要素の追加 |
+| **Ui** | 公開の口（`createWindow`）、利用側に返す窓のオブジェクト（`addButton`・`addValue`・`onPointer`・`draw` の受け渡し）、`Engine` から受け取る論理解像度の保持、起動前のエラー | 窓・部品の処理の中身、描画の中身、他のエンジンモジュール（UI 部品のファイル以外）の import |
+| **UiWindow** | 窓の設定の検証と保持、窓の形（全体・タイトルバー・閉じるボタン・内側）の計算、部品の追加と並び、ポインタの振り分け（押し始めの持ち主、窓の外の押下と閉じる判定）、描くための情報（`view()`）の組み立て | Canvas の操作、部品ごとの押下の中身、値の保存、窓の移動・大きさの変更、部品の自動の並べ方 |
+| **UiButton** | ボタンの設定の検証、当たり判定、押されているかの状態、離したときの反応と取り消し、描くための情報 | Canvas の操作、窓の外の判定 |
+| **UiValue** | 数値・文字の表示の設定の検証、当たり判定、値の読み出しと文字への整え、描くための情報 | Canvas の操作、値の書き換えと保存 |
+| **UiSpec** | 窓と部品の設定の検証の共通処理（項目名を含むエラー、知らない項目の検出）、固定の値または描くたびに呼ぶ関数で渡された文字の読み出し、描く関数の種類の名前の一覧（`LOOK_KINDS`） | 部品ごとの処理、Canvas の操作 |
+| **UiRect** | 論理座標の矩形の計算（点を含むか、重なり） | 部品の知識 |
+| **UiMetrics** | 既定の大きさ（タイトルバーの高さ、部品の高さ、文字の大きさ）の論理座標の数値 | 論理解像度や画素の倍率からの自動の計算、色などの見た目の値 |
+| **UiRenderer** | 窓の描画の手順（種類の順、部品の窓の内側での切り取り、種類ごとの描く関数の選択と `save` / `restore` で囲んだ呼び出し） | 状態の変更、当たり判定、標準の見た目の中身 |
+| **UiStandardLook** | 標準の見た目（単色の塗り・枠・文字。フォントは `sans-serif` などの既定の指定）で種類ごとに描く関数 | 画像・フォントの読み込み、状態の変更、ゲーム固有の値 |
 | **Sound** | AudioContext の管理（最初の入力と、ブラウザが止めたあとの入力での再開を含む）、音声のデコードと名前での保持、SEとBGMの再生、フェード、音量 | BGMの状態遷移（ピンチなどの判定はゲーム側）、ファイルの読み込み |
 | **Storage** | 単一JSONの保存と読み込み、版番号が違うときの既定値への初期化、`localStorage` が使えないときのメモリ上での継続 | セーブ内容の定義、移行処理 |
 | **DebugOverlay** | FPSの計算（表示の有無にかかわらず毎フレーム）と値の保持、表示の有無と位置（画面の四隅）の保持、表示（表示の `save` / `restore` の中での論理座標への拡大の設定を含む）、位置の値の一覧（`FPS_POSITIONS`）の定義 | ゲーム状態の参照、公開APIの引数の検証（`Engine` が行う） |
 | **js/main.js** | `Engine.start` に渡す設定（解像度、レイヤー、最初のシーン（boot 画面と、その次に進む画面の指定）、`debug`、`virtualPad` など）の用意と `Engine.start` の呼び出し | ゲームロジック、描画処理 |
-| **js/scenes/** | シーンごとの進行と、`effect/`・`entities/` の呼び出し、`ui` レイヤーの画面構成（文字、画像、ボタン、暗幕）、スプライトの配置（位置と回転の設定と `draw` の呼び出し）、スプライトの焼き付け（`CanvasCache` での作成をシーンの `init`、手放しを `destroy` で行う）。タイトルとプレイの共通処理（`FlightScene`。機体の焼き付けの作成と手放しを含む）、ミュートの保存と反映（`mute.js`）、文字の共通処理（`uiText.js`）、メニューの仕組み（`MenuScene`）、土台のメニューの項目（`playMenu.js`）、スローの切り替え（`slow.js`）、FPS の表示の切り替え（`fps.js`）、boot 画面（`BootScene`。最初の入力を受け、次の画面へ進む。ファイル全体の目印はなく、押した瞬間の SE だけ目印付き）もここに置く | 細かい動きや描画の実装（機体の動き、星・トレイル・風の描画） |
+| **js/scenes/** | シーンごとの進行と、`effect/`・`entities/` の呼び出し、`ui` レイヤーの画面構成（文字、画像、ボタン、暗幕）、スプライトの配置（位置と回転の設定と `draw` の呼び出し）、スプライトの焼き付け（`CanvasCache` での作成をシーンの `init`、手放しを `destroy` で行う）。タイトルとプレイの共通処理（`FlightScene`。機体の焼き付けの作成と手放しを含む）、ミュートの保存と反映（`mute.js`）、文字の共通処理（`uiText.js`）、メニューの仕組み（`MenuScene`）、土台のメニューの項目（`playMenu.js`）、スローの切り替え（`slow.js`）、FPS の表示の切り替え（`fps.js`）、UI の見本の窓（中身と開き方 `uiSample.js`、窓を置くシーン `UiSampleScene`、差し替えた見た目 `uiSampleLook.js`）、boot 画面（`BootScene`。最初の入力を受け、次の画面へ進む。ファイル全体の目印はなく、押した瞬間の SE だけ目印付き）もここに置く | 細かい動きや描画の実装（機体の動き、星・トレイル・風の描画） |
 | **js/ui/** | バーチャルパッドの定義（配置、キーの割り当て、画像のファイル名）、画像の読み込みと描画 | ゲーム進行、目印の付いたコードの import |
 | **js/effect/** | 星、トレイルなどの演出の更新と描画 | ゲーム進行に影響する処理 |
 | **js/entities/** | 位置や状態の保持、動きの更新、自動操縦 | 描画命令の直書き（描画はスプライトや `effect/` に任せる） |
 | **assets/sprites/*.js** | 見た目の描画（`oz/ENGINE_API.md` 23章の約束）。`ship.js` は OZ Vector Editor の書き出しファイルで、手で編集しない | 位置や動き、外部への依存（組み立て用のJSがパーツのスプライトJSを `import` することを除く） |
 
-**エンジンに入れないもの:** スプライトの描画処理（絵の中身を描くこと。`CanvasCache` は渡された描く処理を呼んで焼き付けるだけで、これと両立する）、アニメーション、カメラ、当たり判定、物理、パーティクル、Entity基底クラス、遷移演出、タブやスクロールなどのUI部品。必要になったPhaseで、発注者の承認を得てから検討する（憲法3章「先回り実装の禁止」）。
+**エンジンに入れないもの:** スプライトの描画処理（絵の中身を描くこと。`CanvasCache` は渡された描く処理を呼んで焼き付けるだけで、これと両立する）、アニメーション、カメラ、当たり判定、物理、パーティクル、Entity基底クラス、遷移演出。必要になったPhaseで、発注者の承認を得てから検討する（憲法3章「先回り実装の禁止」）。
 
 **自動テスト（`test/`）の規則:**
 
@@ -170,7 +180,7 @@ Scene・GameLoop・Time・Screen・Scenes・Layers・Input・Buttons・Keys・Vi
 * **置き場所と命名:** `test/<対象モジュール名>[.<観点>].test.js`（対象がモジュールでない場合は、対象のファイルの名前を使う。指紋一覧は `test/FINGERPRINTS.test.js`）。`test/` にはテスト以外の `.js`（共有の補助モジュールを含む）を置かず、補助関数は各テストファイルの中に書く。`node --test` は既定のパターンに合うファイルをすべて実行するので、そのパターンに合う名前（`*.test.js`・`*-test.js`・`*_test.js`・`test-*.js`・`test.js`）を `test/` の外のファイルに付けてはならない。
 * **import の規則:** 対象を `oz/src/` から相対パスで直接 import し、`oz/index.js` は import しない。公開されたものだけを通して確かめ、テストのためにソースを変えない。依存は `test/ → oz/src/` の一方向で、`oz/`・`js/`・`assets/`・`index.html` は `test/` を参照しない。指紋一覧のテストは `oz/src/` を import せず、`oz/` 以下のファイルをデータとして読む（`oz/` のパスは `import.meta.url` から求める）。
 * **偽の `window`:** テストファイル内の素のオブジェクトで作り、`globalThis.window` に置いた場合はテストの終了時に（`t.after` で）元に戻す。`window` 以外のグローバルには代入しない。`t.after` は登録した順に動くため、1つのテスト（`t`）で偽の `window` を置くのは1回だけにし、ケースを繰り返すときはサブテストに分ける。`console.warn` は `t.mock.method` で抑止する。状態を持つ `Storage` は、クエリ付きの動的 import でテストごとに読み込み直す。
-* **対象:** `Time`・`Scenes`・`Screen`・`Storage`・`Keys`・`VirtualPad`・`VirtualPads`（`Keys`・`VirtualPad`・`VirtualPads` は `window` を使わない）、`CanvasCache`（Canvas を使わない部分: 引数の検証、画素数と余白の計算、画素合わせの判定、起動前のエラー。焼き付けと描画、自動の焼き直しはテストしない。`window` を使わない）、`DebugOverlay`（Canvas を使わない部分: FPS の値の計算、最初の計算までの `null`、表示の有無と位置の保持、位置の値の一覧。描画はテストしない。`window` を使わない）、指紋一覧（`oz/FINGERPRINTS.txt` が `oz/` の中身と一致すること）。テストしないモジュール: `Scene`・`Input`・`Sound`・`Assets`・`Layers`・`GameLoop`・`Engine`・`Buttons`（`Sound` は読み込み時に `window` を使うため、対象にするときに登録の時期を検討する）。
+* **対象:** `Time`・`Scenes`・`Screen`・`Storage`・`Keys`・`VirtualPad`・`VirtualPads`（`Keys`・`VirtualPad`・`VirtualPads` は `window` を使わない）、`CanvasCache`（Canvas を使わない部分: 引数の検証、画素数と余白の計算、画素合わせの判定、起動前のエラー。焼き付けと描画、自動の焼き直しはテストしない。`window` を使わない）、`DebugOverlay`（Canvas を使わない部分: FPS の値の計算、最初の計算までの `null`、表示の有無と位置の保持、位置の値の一覧。描画はテストしない。`window` を使わない）、`Ui`（起動前のエラー、戻り値の操作、中央に置くこと。`window` を使わない）、`UiWindow`（Canvas を使わない部分: 窓と部品の設定の検証、窓の形、部品の当たり判定と窓の内側での切り取り、押す・ずらす・離す・取り消しの流れ、押せないボタン、窓の外で閉じる・閉じない、`'down'` の無い入力、読む関数の呼び出し。`UiButton`・`UiValue`・`UiSpec`・`UiRect`・`UiMetrics` は `UiWindow` を通して確かめる（定数の `LOOK_KINDS`・`DEFAULT_*` は直接確かめる）。`window` を使わない）、指紋一覧（`oz/FINGERPRINTS.txt` が `oz/` の中身と一致すること）。テストしないモジュール: `Scene`・`Input`・`Sound`・`Assets`・`Layers`・`GameLoop`・`Engine`・`Buttons`・`UiRenderer`・`UiStandardLook`（`UiRenderer`・`UiStandardLook` は描画と標準の見た目の中身のため。`Sound` は読み込み時に `window` を使うため、対象にするときに登録の時期を検討する）。
 
 **指紋一覧（`oz/FINGERPRINTS.txt`）の規則:**
 
