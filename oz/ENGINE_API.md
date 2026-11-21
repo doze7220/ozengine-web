@@ -10,7 +10,7 @@
 import { Engine, Scene, Assets, Sound, Storage, CanvasCache } from 'oz';
 ```
 
-* `Engine` : 起動、シーンの操作、`timeScale` の読み書き、ボタンの登録、キーの状態の取得、バーチャルパッドの登録と状態の取得
+* `Engine` : 起動、シーンの操作、`timeScale` の読み書き、FPS の表示の出し入れと位置、FPS の値の読み取り（14章）、ボタンの登録、キーの状態の取得、バーチャルパッドの登録と状態の取得
 * `Scene` : シーンの基底クラス
 * `Assets` : 画像と音声のロードと取得
 * `Sound` : 音の再生と音量
@@ -67,7 +67,7 @@ import { Engine, Scene, Assets, Sound, Storage, CanvasCache } from 'oz';
 | `layers` | 必須 | - | レイヤー名の配列。空でない。奥から手前の順 |
 | `scene` | 必須 | - | 最初のシーン。`Scene` のインスタンス（クラスそのものはエラー） |
 | `tickRate` | 任意 | `60` | 1秒あたりの `update` のティック数。正の有限数 |
-| `debug` | 任意 | `false` | 真なら FPS を最前面に表示する |
+| `debug` | 任意 | `false` | 真なら FPS を表示した状態で始める（`Engine.fpsVisible` の起動時の値。14章）。真偽は `Boolean(...)` で解釈し、型の検証はしない |
 | `virtualPad` | 任意 | `false` | 真ならバーチャルパッド（画面のスティックとボタン。24章）の仕組みを有効にする。真偽は `Boolean(...)` で解釈し、型の検証はしない |
 
 最小の起動例:
@@ -161,7 +161,7 @@ class MoveScene extends Scene {
 * `popScene` などでスタックが空になってもエラーにならない。シーンのメソッドは何も呼ばれない。
 * 空のスタックへの `popScene` は何もしない。
 * 配る先のない入力は捨てられる。`Engine.isKeyDown` は使える。
-* 画面の消去と、`debug` の FPS 表示は続く。
+* 画面の消去と、FPS の表示（14章）は続く。
 * `pushScene` または `changeScene` で再開できる。
 
 ## 10. レイヤーの重なり方
@@ -212,28 +212,55 @@ Engine.timeScale = 0.5; // 半分の速さ
 * `update` の中で描画しない。`draw` の中でシーンの状態を変更しない。
 * `draw` の中で `ctx` の状態を変更するときは、`ctx.save()` と `ctx.restore()` を対で使う。
 
-## 14. `debug`
+## 14. FPS の表示
 
-`debug: true` で起動すると、FPS を表示した状態で始まる（`Engine.fpsVisible` の起動時の値）。表示は最前面に出る。
+FPS（1秒あたりのフレーム数）を画面の四隅のどれかに表示でき、値をゲームから読める。表示は最前面（すべてのレイヤーとシーンの上）に出る。見た目（文字の大きさ・色・縁取り）は変えられない。
 
 `Engine.start` の後から次の3つが使える。
 
 | API | 読み書き | 値 | 既定 |
 |---|---|---|---|
-| `Engine.fpsVisible` | 読み書き | `true`（表示）/ `false`（非表示） | `debug` を `Boolean(...)` にした値 |
+| `Engine.fpsVisible` | 読み書き | `true`（表示）/ `false`（非表示） | 起動設定 `debug` を `Boolean(...)` にした値（`debug` を省くと `false`） |
 | `Engine.fps` | 読み取りのみ | 整数の FPS。起動から約1秒は `null` | `null` |
 | `Engine.fpsPosition` | 読み書き | `'top-left'`・`'top-right'`・`'bottom-left'`・`'bottom-right'` | `'top-left'` |
 
+* 起動設定 `debug` は、`Engine.fpsVisible` の起動時の値だけを決める（3章）。位置は起動設定では指定できない（起動後に `Engine.fpsPosition` で変える）。
+
 ```js
-Engine.fpsVisible = true;
-Engine.fpsPosition = 'bottom-right';
-const fps = Engine.fps; // null の間もある
+// 毎フレームの draw で、FPS の値を読んで文字を描く（draw の中では読むだけ）
+draw(ctx, layer, time) {
+  if (layer !== 'main') return;
+  const fps = Engine.fps; // 起動から約1秒は null
+  ctx.fillText(fps === null ? 'FPS: --' : `FPS: ${fps}`, 20, 40);
+}
+
+// ボタンやキーの処理で、表示の出し入れと位置を変える
+onKeyDown(code) {
+  if (code === 'KeyF') Engine.fpsVisible = !Engine.fpsVisible;
+  if (code === 'KeyG') Engine.fpsPosition = 'bottom-right';
+}
 ```
 
-* 起動前に読み書きすると `Error`（`[oz] Engine.fpsVisible: Engine.start の前には使えません`）。
-* `Engine.fpsVisible` に真偽値以外、`Engine.fpsPosition` に4つ以外を代入すると `RangeError`。値は変わらない。
-* `Engine.fps` は setter が無い。代入すると strict モードのコード（ES Modules の中）では `TypeError`、strict でないコードでは無視され、値は変わらない。
-* フレーム処理の中でこれらのエラーが起きると、ほかの例外と同じくループが止まる（15章）。
+### 値と表示
+
+* **FPS の計算:** 約1秒ごとに、その間のフレーム数を経過時間で割り、四捨五入した整数にする。
+* **値が変わる時期:** 約1秒に1回、各フレームの最後（`draw` の後）。1フレームの間（入力の配信・`update`・`draw`）は変わらないので、`draw` から読んでよい。
+* **`null` の間:** 起動から最初の計算までの約1秒は `Engine.fps` が `null`。表示の `FPS: --` に当たる。
+* **表示を消している間:** `Engine.fpsVisible` が `false` でも FPS の計算は続き、`Engine.fps` は更新される。
+* **位置:** 四隅のどれか。隅からの距離はどの隅も同じ（論理座標で 8）で、右の隅は右寄せ、下の隅は下寄せで描くので、文字の長さが変わっても隅からの距離は変わらず、画面の外にはみ出さない。位置は論理解像度（`width`・`height`）に対して決まり、ウィンドウの大きさや画素の倍率が変わっても同じ隅に付く。
+
+### 代入の効き方と場所
+
+* `Engine.fpsVisible`・`Engine.fpsPosition` への代入は、次の表示から効く。入力の配信（`onPointer`・`onKeyDown`・`onPress`）や `update` の中で代入した場合は、そのフレームの表示から効く。
+* 代入してよい場所は、`update`・`onPointer`・`onKeyDown`・`onPress` の中と、フレーム処理の外。`draw` の中では読むだけにする（13章）。
+
+### エラー
+
+* **起動前:** `Engine.fpsVisible`・`Engine.fps`・`Engine.fpsPosition` の読み書きは `Error`（例: `[oz] Engine.fpsVisible: Engine.start の前には使えません`）。ただし `Engine.fps` は setter が無いので、代入は起動前でも下の `TypeError` になる（読むと起動前は `Error`）。
+* **`Engine.fpsVisible` に真偽値以外:** `RangeError`（例: `[oz] Engine.fpsVisible: true か false で指定してください: 1`）。値は変わらない。
+* **`Engine.fpsPosition` に4つ以外:** `RangeError`（例: `[oz] Engine.fpsPosition: 'top-left'・'top-right'・'bottom-left'・'bottom-right' のどれかで指定してください: center`）。値は変わらない。
+* **`Engine.fps` への代入:** 起動の前後にかかわらず、strict モードのコード（ES Modules の中。ゲームのコードは常にこれ）では `TypeError` で、値は変わらない。strict でないコード（開発者ツールのコンソールなど）ではエラーにならず無視され、値は変わらない。
+* フレーム処理の中でこれらのエラーを起こすと、ほかの例外と同じくループが止まる（15章）。
 
 ## 15. 例外
 
