@@ -1,5 +1,6 @@
 /**
- * 責務: UI の見本の、差し替えた見た目（暗幕・窓・タイトルバー・閉じるボタン・ボタン・数値・文字の表示の6種類の描く関数）。
+ * 責務: UI の見本の、差し替えた見た目（暗幕・窓・タイトルバー・閉じるボタン・ボタン・数値・文字の表示・
+ * チェックボックス・スライダー・選択肢の列の9種類の描く関数）。
  */
 /* ozengine sample */
 
@@ -47,6 +48,18 @@ const VALUE_RADIUS = 16;
 const VALUE_FILL = '#eaf2f8';
 /** 項目名の色 */
 const VALUE_LABEL_COLOR = '#34495e';
+/** 値を変える部品の地の色（押されているとき） */
+const CONTROL_FILL_PRESSED = '#d6eaf8';
+/** チェックボックスの箱の一辺 */
+const CHECKBOX_BOX_SIZE = 44;
+/** チェックボックスの箱の角の丸み */
+const CHECKBOX_RADIUS = 8;
+/** チェックボックスの箱の枠・レ点の太さ */
+const CHECKBOX_LINE_WIDTH = 4;
+/** スライダーのつまみの白い縁の太さ */
+const KNOB_RIM_WIDTH = 4;
+/** 選択肢の矩形からの内側への余白 */
+const CHOICE_INSET = 4;
 
 /**
  * 角の丸い矩形の道筋を作る（arcTo で書く。ctx.roundRect は古い Safari に無いため使わない）。塗りも線も描かない。
@@ -177,8 +190,111 @@ function drawValue(ctx, { x, y, width, height, label, text }) {
 }
 
 /**
- * 差し替えた見た目（Ui.createWindow の look に渡す。6種類すべて）。
- * @type {{ backdrop: Function, window: Function, titleBar: Function, closeButton: Function, button: Function, value: Function }}
+ * チェックボックスを描く（淡い青の地、左に箱、右に項目名）。
+ * @param {CanvasRenderingContext2D} ctx 描画先
+ * @param {{ x: number, y: number, width: number, height: number, label: string, checked: boolean, pressed: boolean }} info 部品の矩形・項目名・状態
+ * @returns {void}
+ */
+function drawCheckbox(ctx, { x, y, width, height, label, checked, pressed }) {
+  roundRectPath(ctx, x, y, width, height, VALUE_RADIUS);
+  ctx.fillStyle = pressed ? CONTROL_FILL_PRESSED : VALUE_FILL;
+  ctx.fill();
+  const boxX = x + TEXT_PADDING;
+  const boxY = y + (height - CHECKBOX_BOX_SIZE) / 2;
+  const half = CHECKBOX_LINE_WIDTH / 2;
+  roundRectPath(ctx, boxX + half, boxY + half, CHECKBOX_BOX_SIZE - CHECKBOX_LINE_WIDTH, CHECKBOX_BOX_SIZE - CHECKBOX_LINE_WIDTH, CHECKBOX_RADIUS);
+  if (checked) {
+    ctx.fillStyle = ACCENT_COLOR;
+    ctx.fill();
+  }
+  ctx.strokeStyle = ACCENT_COLOR;
+  ctx.lineWidth = CHECKBOX_LINE_WIDTH;
+  ctx.stroke();
+  if (checked) {
+    ctx.strokeStyle = WHITE;
+    ctx.lineWidth = CHECKBOX_LINE_WIDTH;
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+    ctx.beginPath();
+    ctx.moveTo(boxX + CHECKBOX_BOX_SIZE * 0.22, boxY + CHECKBOX_BOX_SIZE * 0.52);
+    ctx.lineTo(boxX + CHECKBOX_BOX_SIZE * 0.43, boxY + CHECKBOX_BOX_SIZE * 0.73);
+    ctx.lineTo(boxX + CHECKBOX_BOX_SIZE * 0.78, boxY + CHECKBOX_BOX_SIZE * 0.29);
+    ctx.stroke();
+  }
+  const textX = boxX + CHECKBOX_BOX_SIZE + TEXT_PADDING;
+  ctx.fillStyle = VALUE_LABEL_COLOR;
+  ctx.font = FONT;
+  ctx.textAlign = 'left';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(label, textX, y + height / 2, Math.max(0, x + width - TEXT_PADDING - textX));
+}
+
+/**
+ * スライダーを描く（淡い青の地、項目名と値の段、溝、つまみ）。
+ * @param {CanvasRenderingContext2D} ctx 描画先
+ * @param {{ x: number, y: number, width: number, height: number, label: string, text: string, textRow: { x: number, y: number, width: number, height: number }, track: { x: number, y: number, width: number, height: number }, knob: { x: number, y: number, width: number, height: number }, pressed: boolean }} info 部品の矩形・項目名・値の文字・各部の矩形・ドラッグ中か
+ * @returns {void}
+ */
+function drawSlider(ctx, { x, y, width, height, label, text, textRow, track, knob, pressed }) {
+  roundRectPath(ctx, x, y, width, height, VALUE_RADIUS);
+  ctx.fillStyle = VALUE_FILL;
+  ctx.fill();
+  const maxWidth = (width - TEXT_PADDING * 3) / 2;
+  const rowCenter = textRow.y + textRow.height / 2;
+  ctx.font = FONT;
+  ctx.textBaseline = 'middle';
+  ctx.textAlign = 'left';
+  ctx.fillStyle = VALUE_LABEL_COLOR;
+  ctx.fillText(label, x + TEXT_PADDING, rowCenter, maxWidth);
+  ctx.textAlign = 'right';
+  ctx.fillStyle = ACCENT_COLOR;
+  ctx.fillText(text, x + width - TEXT_PADDING, rowCenter, maxWidth);
+  const grooveRadius = track.height / 2;
+  roundRectPath(ctx, track.x, track.y, track.width, track.height, grooveRadius);
+  ctx.fillStyle = BUTTON_FILL_DISABLED;
+  ctx.fill();
+  const knobCx = knob.x + knob.width / 2;
+  const knobCy = knob.y + knob.height / 2;
+  const filled = Math.min(track.width, Math.max(0, knobCx - track.x));
+  if (filled > 0) {
+    roundRectPath(ctx, track.x, track.y, filled, track.height, Math.min(grooveRadius, filled / 2));
+    ctx.fillStyle = BUTTON_FILL;
+    ctx.fill();
+  }
+  const knobRadius = Math.min(knob.width, knob.height) / 2 - KNOB_RIM_WIDTH / 2;
+  ctx.beginPath();
+  ctx.arc(knobCx, knobCy, knobRadius, 0, Math.PI * 2);
+  ctx.fillStyle = pressed ? CLOSE_FILL : ACCENT_COLOR;
+  ctx.fill();
+  ctx.strokeStyle = WHITE;
+  ctx.lineWidth = KNOB_RIM_WIDTH;
+  ctx.stroke();
+}
+
+/**
+ * 選択肢の列を描く（選択肢ごとに、矩形より少し内側の角の丸い矩形と文字）。
+ * @param {CanvasRenderingContext2D} ctx 描画先
+ * @param {{ choices: { x: number, y: number, width: number, height: number, label: string, selected: boolean, pressed: boolean }[] }} info 列の全体と、選択肢ごとの矩形・文字・状態
+ * @returns {void}
+ */
+function drawChoices(ctx, { choices }) {
+  ctx.font = FONT;
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  for (const c of choices) {
+    const w = c.width - CHOICE_INSET * 2;
+    const h = c.height - CHOICE_INSET * 2;
+    roundRectPath(ctx, c.x + CHOICE_INSET, c.y + CHOICE_INSET, w, h, VALUE_RADIUS);
+    ctx.fillStyle = c.pressed ? BUTTON_FILL_PRESSED : c.selected ? BUTTON_FILL : VALUE_FILL;
+    ctx.fill();
+    ctx.fillStyle = c.selected || c.pressed ? WHITE : VALUE_LABEL_COLOR;
+    ctx.fillText(c.label, c.x + c.width / 2, c.y + c.height / 2, Math.max(0, w - TEXT_PADDING * 2));
+  }
+}
+
+/**
+ * 差し替えた見た目（Ui.createWindow の look に渡す。9種類すべて）。
+ * @type {{ backdrop: Function, window: Function, titleBar: Function, closeButton: Function, button: Function, value: Function, checkbox: Function, slider: Function, choices: Function }}
  */
 export const SAMPLE_LOOK = {
   backdrop: drawBackdrop,
@@ -187,4 +303,7 @@ export const SAMPLE_LOOK = {
   closeButton: drawCloseButton,
   button: drawButton,
   value: drawValue,
+  checkbox: drawCheckbox,
+  slider: drawSlider,
+  choices: drawChoices,
 };
