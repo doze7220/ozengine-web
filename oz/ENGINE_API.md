@@ -4,10 +4,10 @@
 
 ## 1. 概要と使えるもの
 
-利用側が使えるのは次の6つだけである。
+利用側が使えるのは次の7つだけである。
 
 ```js
-import { Engine, Scene, Assets, Sound, Storage, CanvasCache } from 'oz';
+import { Engine, Scene, Assets, Sound, Storage, CanvasCache, Ui } from 'oz';
 ```
 
 * `Engine` : 起動、シーンの操作、`timeScale` の読み書き、FPS の表示の出し入れと位置、FPS の値の読み取り（14章）、ボタンの登録、キーの状態の取得、バーチャルパッドの登録と状態の取得
@@ -16,6 +16,7 @@ import { Engine, Scene, Assets, Sound, Storage, CanvasCache } from 'oz';
 * `Sound` : 音の再生と音量
 * `Storage` : 設定の保存
 * `CanvasCache` : 描く処理の焼き付け（25章）
+* `Ui` : 窓と UI 部品（ボタン、数値・文字の表示）（26章）
 
 ブラウザの Canvas 2D と ES Modules で動く。ビルドは不要だが、実行には静的サーバが必要である（`file://` では ES Modules が動かない）。
 
@@ -990,3 +991,135 @@ class BadgeScene extends Scene {
 * 焼き付け用の Canvas を用意できないとエラー（`[oz] CanvasCache.create: 焼き付け用の Canvas を用意できません`）。
 * 手放した後の `draw`・`refresh` はエラー（`[oz] 焼き付けの draw: dispose の後には使えません`、`[oz] 焼き付けの refresh: dispose の後には使えません`）。
 * 描く処理が投げた例外は、包み直さずそのまま伝わる。`create` の中なら焼き付けは返らない。`refresh()` や自動の焼き直し（`draw` の中）で投げたときは、その呼び出しから例外が出て、その焼き付けは次に描くときにもう一度焼き直される。フレーム処理の中で起きればループが止まる（15章）。
+
+## 26. UI 部品（窓、ボタン、数値・文字の表示）
+
+`Ui` で、タイトルバーと閉じるボタンのある窓を作り、その中にボタンと数値・文字の表示を置ける。窓はシーンが持つ。エンジンは標準の見た目（単色の塗り・枠・文字）で描く。見た目は `look` で差し替えられる。`Ui.createWindow` は `Engine.start` の後から使える（最初のシーンの `init` の中でもよい）。
+
+```js
+import { Scene, Ui } from 'oz';
+```
+
+| 操作 | 内容 |
+| --- | --- |
+| `Ui.createWindow(options)` | 窓を作り、窓の操作のオブジェクトを返す |
+
+### `Ui.createWindow(options)`
+
+表にない項目はエラーになる。任意の項目は、書かないか `undefined` にすると既定になる（`null` はエラー）。値はコピーして持ち、後から元のオブジェクトを変えても影響しない。
+
+| 項目 | 必須 | 既定 | 内容 |
+| --- | --- | --- | --- |
+| `title` | 必須 | - | タイトルバーの文字。文字列（空文字も可） |
+| `width`・`height` | 必須 | - | 窓の全体（タイトルバーを含む）の大きさ（論理座標）。正の有限数で、どちらも `titleBarHeight` より大きい |
+| `x`・`y` | 任意 | 中央 | 窓の左上（論理座標）。有限の数値。省略した軸は画面の中央に置く |
+| `onClose` | 必須 | - | 閉じるときに引数なしで呼ぶ関数 |
+| `closeOnOutside` | 任意 | `true` | 窓の外を押して離したら閉じるか。`true` か `false` |
+| `titleBarHeight` | 任意 | `88` | タイトルバーの高さ。閉じるボタンは、この長さの正方形 |
+| `textSize` | 任意 | `36` | 文字の大きさ。正の有限数 |
+| `look` | 任意 | - | 種類ごとの描く関数（`backdrop`・`window`・`titleBar`・`closeButton`・`button`・`value`）。渡した種類はその関数で、渡さなかった種類は標準の見た目で描く |
+
+### 窓の4つの操作
+
+返される窓のオブジェクトは凍結されていて、次の4つだけを持つ。いずれも戻り値は使わない。
+
+| 操作 | 内容 |
+| --- | --- |
+| `addButton(spec)` | ボタンを足す |
+| `addValue(spec)` | 数値・文字の表示を足す |
+| `onPointer(pointer)` | シーンの `onPointer` で受けたポインタをそのまま渡す |
+| `draw(ctx)` | 窓を描く。シーンの `draw` の中で呼ぶ |
+
+窓の形: 窓の上端にタイトルバーがあり、その右端に閉じるボタン（タイトルバーの高さの正方形）がある。画面全体に暗幕を描く。部品の位置の原点は、窓の内側（タイトルバーの下）の左上である。窓の外へはみ出した部品は、窓の内側で切り取られる（見える部分だけが押せる）。
+
+### `addButton(spec)`・`addValue(spec)`
+
+表にない項目はエラーになる。部品は窓を作った後いつでも足せる（削除・移動はできない）。
+
+`addButton(spec)`:
+
+| 項目 | 必須 | 既定 | 内容 |
+| --- | --- | --- | --- |
+| `x`・`y` | 必須 | - | 窓の内側の左上を原点とする位置（論理座標）。有限の数値 |
+| `width` | 必須 | - | 幅。正の有限数 |
+| `height` | 任意 | `88` | 高さ。正の有限数 |
+| `label` | 必須 | - | 文字。文字列、または描くたびに呼ぶ関数（引数なし。戻り値は文字にする） |
+| `onPress` | 必須 | - | 押されたとき（離したとき）に引数なしで呼ぶ関数 |
+| `enabled` | 任意 | 常に押せる | 押せるかを返す関数（引数なし）。偽なら押せない |
+
+`addValue(spec)`（押しても何も起きない）:
+
+| 項目 | 必須 | 既定 | 内容 |
+| --- | --- | --- | --- |
+| `x`・`y`・`width`・`height` | | | `addButton` と同じ |
+| `label` | 必須 | - | 項目名。`addButton` の `label` と同じ形 |
+| `read` | 必須 | - | 値を読む関数（引数なし）。描くたびに1回呼ぶ |
+| `format` | 任意 | `String(value)` | 読んだ値を表示の文字にする関数（引数は読んだ値。戻り値は文字にする） |
+
+* 後に足した部品が上に描かれ、押したときも後に足した部品だけが調べられる。矩形は左端・上端を含み、右端・下端を含まない。
+* 文字が部品の幅に収まらないとき、標準の見た目は文字を横に縮めて収める。
+
+### ポインタの受け方
+
+* ボタンは離したときに反応する。押したまま外へずらして離すと何も起きない（取り消し）。外へずらしてから戻して離すと反応する。
+* 押し始めた部品が、離すまでポインタを受け取る。押せないボタン（`enabled` が偽）、数値・文字の表示、部品の無いところ、タイトルバーを押しても何も起きない。
+* 窓の外を押して外で離すと、`closeOnOutside` が `true` なら `onClose` が呼ばれる。窓の外の押下は部品にも届かない。窓の中で押して外で離す、外で押して中で離すときは閉じない。
+* `'down'` の無い `'move'`・`'up'` には、どの部品も反応せず、窓も閉じない。
+* `onPress`・`onClose` は窓の `onPointer` の中から呼ばれるので、シーンの操作（`Engine.popScene` など）をしてよい（7章）。`label`・`enabled`・`read`・`format` は `draw` の中から呼ばれるので、状態を変えないこと。
+
+### シーンへの置き方
+
+シーンは `init` で窓を作り、`onPointer` と `draw` で窓へ渡す。窓を `Engine.pushScene` で積めば、最前面のシーンにだけ入力が届くので、背面のシーンには入力が届かない。`onClose` で `Engine.popScene()` する。シーンを積むたびに、新しい窓を作る。
+
+```js
+import { Engine, Scene, Ui } from 'oz';
+
+class SettingsScene extends Scene {
+  init() {
+    this.window = Ui.createWindow({
+      title: '設定',
+      width: 600,
+      height: 400,
+      onClose: () => Engine.popScene(),
+    });
+    this.window.addValue({ x: 20, y: 20, width: 560, label: 'スロー', read: () => Engine.timeScale });
+    this.window.addButton({ x: 20, y: 130, width: 560, label: '閉じる', onPress: () => Engine.popScene() });
+  }
+
+  onPointer(pointer) {
+    this.window.onPointer(pointer);
+  }
+
+  draw(ctx, layer) {
+    if (layer === 'ui') this.window.draw(ctx);
+  }
+}
+```
+
+### 見た目の差し替え
+
+`look` の関数は `(ctx, info) => void` で、1回ごとに `ctx.save()` と `ctx.restore()` で囲んで呼ばれる。順序は 暗幕 → 窓 → タイトルバー → 閉じるボタン → 部品（足した順。窓の内側で切り取る）。`info` の座標はすべて画面の論理座標である。差し替えても、押せる範囲は変わらない（描く関数は矩形の内側に描くことを勧める）。
+
+| 種類 | `info` の項目 |
+| --- | --- |
+| `backdrop` | `x`・`y`・`width`・`height`（論理解像度の全体） |
+| `window` | `x`・`y`・`width`・`height`（窓の全体）、`title`、`textSize` |
+| `titleBar` | `x`・`y`・`width`・`height`（全幅で、閉じるボタンの部分を含む）、`title`、`textSize` |
+| `closeButton` | `x`・`y`・`width`・`height`、`pressed`、`textSize` |
+| `button` | `x`・`y`・`width`・`height`、`label`、`pressed`、`enabled`、`textSize` |
+| `value` | `x`・`y`・`width`・`height`、`label`、`value`（`read` の戻り値）、`text`（`format` で整えた文字）、`textSize` |
+
+### 既定の大きさ
+
+タイトルバーの高さ 88、部品の高さ 88、文字の大きさ 36 は、論理解像度の短い辺が 720 のゲームを、スマートフォンで短い辺を画面の短い辺に合わせて表示する前提の値である。短い辺が違うゲームでは、`titleBarHeight`・`textSize`・部品ごとの `height` を渡す（目安は `既定 × 短い辺 / 720`）。
+
+### 注意
+
+* 窓を置いたシーン自身が `Engine.addButton` で窓と重なる位置にボタンを登録すると、そのボタンが押下を独占し、窓には届かない。
+* バーチャルパッド（24章）が処理した指は、窓にも部品にも届かない。パッドが反応するのは最前面のシーンに登録したパッドだけなので、背面のシーンのパッドの位置の押下は、窓の外の押下として扱われる。そうしたくないときは、窓を置いたシーンにも同じ配置のパッドを登録し、窓とパッドの円を重ねない。
+
+### エラー
+
+* すべて `Error`（先頭に `[oz] Ui.createWindow:`、窓の `addButton` は `[oz] 窓の addButton:`、`addValue` は `[oz] 窓の addValue:`）。項目名を含む。上から順に調べ、最初に当たったものを投げる。エラーのときは、窓は作られず、部品は足されない。
+* `Engine.start` の前の `Ui.createWindow` はエラー（`[oz] Ui.createWindow: Engine.start の前には使えません`）。この判定は引数の検証より先に行う。
+* フレーム処理の中でエラーを起こすと、ほかの例外と同じくループが止まる（15章）。

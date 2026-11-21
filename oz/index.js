@@ -7,3 +7,4 @@ export { Assets } from './src/Assets.js';
 export { Sound } from './src/Sound.js';
 export { Storage } from './src/Storage.js';
 export { CanvasCache } from './src/CanvasCache.js';
+export { Ui } from './src/Ui.js';
