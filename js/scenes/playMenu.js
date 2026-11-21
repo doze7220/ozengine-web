@@ -1,11 +1,12 @@
 /**
- * 責務: 土台のプレイ中メニューの5項目（閉じる、スロー、ミュート、FPS、タイトルに戻る）の定義と表示。
+ * 責務: 土台のプレイ中メニューの6項目（閉じる、スロー、ミュート、FPS、UI の見本、タイトルに戻る）の定義と表示。
  */
 /* ozengine sample */
 import { openMenu, closeMenu } from './MenuScene.js';
 import { isSlow, toggleSlow, resetSlow } from './slow.js';
 import { isMuted, toggleMute } from './mute.js';
 import { fpsLabel, cycleFps } from './fps.js';
+import { openUiSample } from './uiSample.js';
 
 /** メニューを描くレイヤー名 */
 const MENU_LAYER = 'ui';
@@ -33,6 +34,13 @@ export function openPlayMenu(screen, backToTitle) {
       { label: () => (isSlow() ? 'スロー: ON' : 'スロー: OFF'), key: SLOW_KEY, onSelect: () => toggleSlow() },
       { label: () => (isMuted() ? 'ミュート: ON' : 'ミュート: OFF'), key: MUTE_KEY, onSelect: () => toggleMute() },
       { label: fpsLabel, key: FPS_KEY, onSelect: () => cycleFps() },
+      {
+        label: 'UI の見本',
+        onSelect: () => {
+          closeMenu();
+          openUiSample('standard');
+        },
+      },
       {
         label: 'タイトルに戻る',
         onSelect: () => {
