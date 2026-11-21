@@ -1,5 +1,5 @@
 /**
- * 責務: プレイ画面のキー操作（旋回、ブースト、スロー、メニュー）、バーチャルパッドとメニューを開くボタンの登録、状態表示。
+ * 責務: プレイ画面のキー操作（旋回、ブースト、スロー、FPS の表示、メニュー）、バーチャルパッドとメニューを開くボタンの登録、状態表示。
  */
 /* ozengine sample */
 import { Engine, Sound } from 'oz';
@@ -9,6 +9,7 @@ import { FlightScene } from './FlightScene.js';
 import { drawMenuButton } from './MenuScene.js';
 import { openPlayMenu } from './playMenu.js';
 import { isSlow, toggleSlow } from './slow.js';
+import { cycleFps } from './fps.js';
 import { drawSlowLabel } from './uiText.js';
 
 /** 1ティックあたりの目標の角度の変化（ラジアン）。tickRate 60 前提 */
@@ -21,6 +22,8 @@ const RIGHT_KEY = 'ArrowRight';
 const BOOST_KEY = 'Space';
 /** スローを切り替えるキー */
 const SLOW_KEY = 'KeyS';
+/** FPS の表示を切り替えるキー */
+const FPS_KEY = 'KeyF';
 /** メニューを開くキー */
 const MENU_KEY = 'KeyP';
 /** ブースト時の SE の名前 */
@@ -66,7 +69,7 @@ export class PlayScene extends FlightScene {
   }
 
   /**
-   * ブースト、スロー、メニューのキーを受ける。
+   * ブースト、スロー、FPS の表示の切り替え、メニューのキーを受ける。
    * @param {string} code 押されたキーのコード
    * @returns {void}
    */
@@ -76,6 +79,8 @@ export class PlayScene extends FlightScene {
       if (this.boost()) Sound.playSe(BOOST_SE);
     } else if (code === SLOW_KEY) {
       toggleSlow();
+    } else if (code === FPS_KEY) {
+      cycleFps();
     } else if (code === MENU_KEY) {
       openPlayMenu(this.screen, this.backToTitle);
     }
