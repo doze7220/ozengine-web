@@ -46,3 +46,13 @@ export function toggleMute() {
   Storage.set('muted', !isMuted());
   applyMute();
 }
+
+/**
+ * ミュートの状態を指定して保存し、音量に反映する（チェックボックスの write 用）。
+ * @param {boolean} muted 真ならミュートする
+ * @returns {void}
+ */
+export function setMuted(muted) {
+  Storage.set('muted', Boolean(muted));
+  applyMute();
+}

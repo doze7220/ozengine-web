@@ -1,5 +1,5 @@
 /**
- * 責務: 土台のスロー（timeScale の等速とスローの切り替え）。
+ * 責務: 土台のスロー（timeScale の等速とスローの切り替えと、入り切りの指定）。
  */
 /* ozengine sample */
 import { Engine } from 'oz';
@@ -23,6 +23,15 @@ export function isSlow() {
  */
 export function toggleSlow() {
   Engine.timeScale = isSlow() ? NORMAL_TIME_SCALE : SLOW_TIME_SCALE;
+}
+
+/**
+ * スローの入り切りを指定して設定する（チェックボックスの write 用）。
+ * @param {boolean} on 真ならスロー、偽なら等速
+ * @returns {void}
+ */
+export function setSlow(on) {
+  Engine.timeScale = on ? SLOW_TIME_SCALE : NORMAL_TIME_SCALE;
 }
 
 /**
