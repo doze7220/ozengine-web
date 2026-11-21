@@ -1,6 +1,6 @@
 /**
- * @fileoverview 責務: 起動設定の受け取りと各モジュールの初期化、公開操作（シーン操作、timeScale、ボタンの登録、キーの状態の取得、
- * バーチャルパッドの登録と状態の取得）の各モジュールへの委譲、キャンバスキャッシュへの画素の倍率の求め方の受け渡し。
+ * @fileoverview 責務: 起動設定の受け取りと各モジュールの初期化、公開操作（シーン操作、timeScale、ボタン・キー・バーチャルパッド、
+ * FPS の表示の有無・位置の読み書きと値の読み取り）の各モジュールへの委譲、キャンバスキャッシュへの画素の倍率の求め方の受け渡し。
  * ゲームループの中身や描画処理は持たない。
  */
 import { Scene } from './Scene.js';
@@ -9,7 +9,7 @@ import { Time } from './Time.js';
 import { Screen } from './Screen.js';
 import { Scenes } from './Scenes.js';
 import { Layers } from './Layers.js';
-import { DebugOverlay } from './DebugOverlay.js';
+import { DebugOverlay, FPS_POSITIONS } from './DebugOverlay.js';
 import { Input } from './Input.js';
 import { Buttons } from './Buttons.js';
 import { Keys } from './Keys.js';
@@ -92,6 +92,19 @@ function requireStarted(apiName) {
   if (scenes === null) {
     throw new Error(`[oz] ${apiName}: Engine.start の前には使えません`);
   }
+}
+
+/**
+ * 起動済みであることを確認し、DebugOverlay を返す。
+ * @param {string} apiName エラーメッセージに含める公開API名
+ * @returns {DebugOverlay}
+ * @throws {Error} 起動前の場合
+ */
+function requireOverlay(apiName) {
+  if (overlay === null) {
+    throw new Error(`[oz] ${apiName}: Engine.start の前には使えません`);
+  }
+  return overlay;
 }
 
 /**
@@ -212,6 +225,63 @@ export const Engine = {
       throw new Error('[oz] Engine.timeScale: Engine.start の前には使えません');
     }
     time.timeScale = value;
+  },
+
+  /**
+   * FPS を表示するか。
+   * @returns {boolean}
+   * @throws {Error} 起動前の場合
+   */
+  get fpsVisible() {
+    return requireOverlay('Engine.fpsVisible').visible;
+  },
+
+  /**
+   * FPS を表示するかを設定する。次の表示から効く。
+   * @param {boolean} value true で表示、false で非表示
+   * @throws {Error} 起動前の場合
+   * @throws {RangeError} 真偽値でない場合（値は変わらない）
+   */
+  set fpsVisible(value) {
+    const target = requireOverlay('Engine.fpsVisible');
+    if (typeof value !== 'boolean') {
+      throw new RangeError(`[oz] Engine.fpsVisible: true か false で指定してください: ${String(value)}`);
+    }
+    target.visible = value;
+  },
+
+  /**
+   * 直近に計算された FPS（読み取り専用）。起動から約1秒は null。
+   * @returns {number|null}
+   * @throws {Error} 起動前の場合
+   */
+  get fps() {
+    return requireOverlay('Engine.fps').fps;
+  },
+
+  /**
+   * FPS を表示する隅。
+   * @returns {string} 'top-left'・'top-right'・'bottom-left'・'bottom-right' のどれか
+   * @throws {Error} 起動前の場合
+   */
+  get fpsPosition() {
+    return requireOverlay('Engine.fpsPosition').position;
+  },
+
+  /**
+   * FPS を表示する隅を設定する。次の表示から効く。
+   * @param {string} value 'top-left'・'top-right'・'bottom-left'・'bottom-right' のどれか
+   * @throws {Error} 起動前の場合
+   * @throws {RangeError} 4つのどれでもない場合（値は変わらない）
+   */
+  set fpsPosition(value) {
+    const target = requireOverlay('Engine.fpsPosition');
+    if (!FPS_POSITIONS.includes(value)) {
+      throw new RangeError(
+        `[oz] Engine.fpsPosition: 'top-left'・'top-right'・'bottom-left'・'bottom-right' のどれかで指定してください: ${String(value)}`,
+      );
+    }
+    target.position = value;
   },
 
   /**

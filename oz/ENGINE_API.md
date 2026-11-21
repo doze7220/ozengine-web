@@ -214,7 +214,26 @@ Engine.timeScale = 0.5; // 半分の速さ
 
 ## 14. `debug`
 
-`debug: true` で起動すると、左上に FPS が最前面で表示される。実行中には切り替えられない。
+`debug: true` で起動すると、FPS を表示した状態で始まる（`Engine.fpsVisible` の起動時の値）。表示は最前面に出る。
+
+`Engine.start` の後から次の3つが使える。
+
+| API | 読み書き | 値 | 既定 |
+|---|---|---|---|
+| `Engine.fpsVisible` | 読み書き | `true`（表示）/ `false`（非表示） | `debug` を `Boolean(...)` にした値 |
+| `Engine.fps` | 読み取りのみ | 整数の FPS。起動から約1秒は `null` | `null` |
+| `Engine.fpsPosition` | 読み書き | `'top-left'`・`'top-right'`・`'bottom-left'`・`'bottom-right'` | `'top-left'` |
+
+```js
+Engine.fpsVisible = true;
+Engine.fpsPosition = 'bottom-right';
+const fps = Engine.fps; // null の間もある
+```
+
+* 起動前に読み書きすると `Error`（`[oz] Engine.fpsVisible: Engine.start の前には使えません`）。
+* `Engine.fpsVisible` に真偽値以外、`Engine.fpsPosition` に4つ以外を代入すると `RangeError`。値は変わらない。
+* `Engine.fps` は setter が無い。代入すると strict モードのコード（ES Modules の中）では `TypeError`、strict でないコードでは無視され、値は変わらない。
+* フレーム処理の中でこれらのエラーが起きると、ほかの例外と同じくループが止まる（15章）。
 
 ## 15. 例外
 
