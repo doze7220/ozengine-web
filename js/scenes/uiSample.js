@@ -1,10 +1,12 @@
 /**
- * 責務: UI の見本の窓の中身（2種類の窓の設定、部品の並びと位置、見た目の切り替え）と開き方。
+ * 責務: UI の見本の窓（05-02 の見本）の中身（2種類の窓の設定、部品の並びと位置、見た目の切り替え）と、
+ * 2つの見本の窓（05-02 の見本、値を変える部品の見本）の開き方と切り替え。
  */
 /* ozengine sample */
 import { Engine, Ui } from 'oz';
 import { UiSampleScene } from './UiSampleScene.js';
 import { SAMPLE_LOOK } from './uiSampleLook.js';
+import { createValueSampleWindow } from './uiValueSample.js';
 import { isSlow, toggleSlow, resetSlow } from './slow.js';
 
 /**
@@ -16,7 +18,7 @@ const SAMPLE_LAYER = 'ui';
 /** 窓の幅（論理座標） */
 const WINDOW_WIDTH = 600;
 /** 窓の高さ（タイトルバーを含む。論理座標） */
-const WINDOW_HEIGHT = 536;
+const WINDOW_HEIGHT = 640;
 /** 部品の左端（窓の内側の左上が原点） */
 const PART_LEFT = 24;
 /** 1行目の部品の上端 */
@@ -27,6 +29,8 @@ const ROW2_Y = 128;
 const ROW3_Y = 232;
 /** 4行目のボタンの上端 */
 const ROW4_Y = 336;
+/** 5行目のボタンの上端 */
+const ROW5_Y = 440;
 /** 1行に並ぶ2つの表示の幅 */
 const HALF_WIDTH = 268;
 /** 2つ目の表示の左端 */
@@ -54,6 +58,8 @@ const TOGGLE_SLOW_LABEL = 'スローを切り替える';
 const RESET_SLOW_LABEL = '等速に戻す';
 /** 見た目を切り替えるボタンの文言 */
 const SWITCH_LOOK_LABEL = '見た目を切り替える';
+/** 値を変える部品の見本へ進むボタンの文言 */
+const TO_VALUE_SAMPLE_LABEL = '値を変える部品へ';
 
 /**
  * 見本の窓を作り、部品を足して返す。
@@ -104,6 +110,16 @@ export function createSampleWindow(style) {
       openUiSample(custom ? 'standard' : 'custom');
     },
   });
+  win.addButton({
+    x: PART_LEFT,
+    y: ROW5_Y,
+    width: FULL_WIDTH,
+    label: TO_VALUE_SAMPLE_LABEL,
+    onPress: () => {
+      Engine.popScene();
+      openValueSample(style);
+    },
+  });
   return win;
 }
 
@@ -114,4 +130,29 @@ export function createSampleWindow(style) {
  */
 export function openUiSample(style) {
   Engine.pushScene(new UiSampleScene({ layer: SAMPLE_LAYER, createWindow: () => createSampleWindow(style) }));
+}
+
+/**
+ * 値を変える部品の見本の窓を置いたシーンを最前面に積んで開く。
+ * 「最初の見本へ」で UI の見本の同じ種類へ、「見た目を切り替える」で値を変える部品の見本の他方の種類へ替わる。
+ * @param {SampleStyle} style 見本の窓の種類
+ * @returns {void}
+ */
+export function openValueSample(style) {
+  Engine.pushScene(
+    new UiSampleScene({
+      layer: SAMPLE_LAYER,
+      createWindow: () =>
+        createValueSampleWindow(style, {
+          backToFirst: () => {
+            Engine.popScene();
+            openUiSample(style);
+          },
+          switchLook: () => {
+            Engine.popScene();
+            openValueSample(style === 'custom' ? 'standard' : 'custom');
+          },
+        }),
+    }),
+  );
 }
