@@ -15,6 +15,9 @@ export const LOOK_KINDS = Object.freeze([
   'closeButton',
   'button',
   'value',
+  'checkbox',
+  'slider',
+  'choices',
 ]);
 
 /**

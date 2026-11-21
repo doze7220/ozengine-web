@@ -48,6 +48,30 @@ const VALUE_FILL = 'rgba(255, 255, 255, 0.08)';
 /** 数値・文字の表示の項目名の色。 */
 const VALUE_LABEL_COLOR = '#c0c0c0';
 
+/** チェックボックスの箱の一辺。 */
+const CHECKBOX_BOX_SIZE = 44;
+
+/** チェックボックスのレ点の線の太さ。 */
+const CHECK_MARK_WIDTH = 5;
+
+/** スライダーの溝の色。 */
+const SLIDER_GROOVE_COLOR = '#606060';
+
+/** スライダーのつまみの地の色。 */
+const SLIDER_KNOB_FILL = '#c0c0c0';
+
+/** スライダーのつまみの枠の太さ（ドラッグ中は太くする）。 */
+const SLIDER_KNOB_BORDER = 2;
+
+/** スライダーのドラッグ中のつまみの枠の太さ。 */
+const SLIDER_KNOB_BORDER_DRAGGING = 4;
+
+/** 選ばれている選択肢の文字の色。 */
+const CHOICE_SELECTED_TEXT = '#202020';
+
+/** 選ばれていて押されている選択肢の地の色。 */
+const CHOICE_SELECTED_PRESSED_FILL = '#c0c0c0';
+
 /**
  * 矩形の情報。
  * @typedef {Object} LookRect
@@ -212,8 +236,115 @@ function drawValue(ctx, info) {
 }
 
 /**
+ * チェックボックスを描く（全体がボタンと同じ地と枠、左に箱、入りならレ点、右に項目名）。
+ * @param {CanvasRenderingContext2D} ctx 描画先
+ * @param {{x:number,y:number,width:number,height:number,label:string,checked:boolean,pressed:boolean,textSize:number}} info チェックボックスの情報
+ * @returns {void}
+ */
+function drawCheckbox(ctx, info) {
+  ctx.save();
+  ctx.fillStyle = info.pressed ? PRESSED_FILL : BUTTON_FILL;
+  ctx.fillRect(info.x, info.y, info.width, info.height);
+  strokeInside(ctx, info, WHITE);
+  const bx = info.x + TEXT_MARGIN;
+  const by = info.y + (info.height - CHECKBOX_BOX_SIZE) / 2;
+  strokeInside(ctx, { x: bx, y: by, width: CHECKBOX_BOX_SIZE, height: CHECKBOX_BOX_SIZE }, WHITE);
+  if (info.checked) {
+    ctx.strokeStyle = WHITE;
+    ctx.lineWidth = CHECK_MARK_WIDTH;
+    ctx.lineCap = 'butt';
+    ctx.lineJoin = 'miter';
+    ctx.beginPath();
+    ctx.moveTo(bx + CHECKBOX_BOX_SIZE * 0.2, by + CHECKBOX_BOX_SIZE * 0.52);
+    ctx.lineTo(bx + CHECKBOX_BOX_SIZE * 0.42, by + CHECKBOX_BOX_SIZE * 0.74);
+    ctx.lineTo(bx + CHECKBOX_BOX_SIZE * 0.8, by + CHECKBOX_BOX_SIZE * 0.28);
+    ctx.stroke();
+  }
+  const tx = bx + CHECKBOX_BOX_SIZE + TEXT_MARGIN;
+  ctx.fillStyle = WHITE;
+  ctx.font = `${info.textSize}px sans-serif`;
+  ctx.textAlign = 'left';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(
+    info.label,
+    tx,
+    info.y + info.height / 2,
+    Math.max(0, info.x + info.width - TEXT_MARGIN - tx),
+  );
+  ctx.restore();
+}
+
+/**
+ * スライダーを描く（文字の段に項目名と値の文字、溝、溝の左端からつまみまでの塗り、つまみ）。
+ * @param {CanvasRenderingContext2D} ctx 描画先
+ * @param {{x:number,y:number,width:number,height:number,label:string,text:string,textRow:LookRect,track:LookRect,knob:LookRect,pressed:boolean,textSize:number}} info スライダーの情報
+ * @returns {void}
+ */
+function drawSlider(ctx, info) {
+  ctx.save();
+  ctx.fillStyle = VALUE_FILL;
+  ctx.fillRect(info.x, info.y, info.width, info.height);
+  const maxWidth = Math.max(0, (info.width - TEXT_MARGIN * 3) / 2);
+  const cy = info.textRow.y + info.textRow.height / 2;
+  ctx.font = `${info.textSize}px sans-serif`;
+  ctx.textBaseline = 'middle';
+  ctx.textAlign = 'left';
+  ctx.fillStyle = VALUE_LABEL_COLOR;
+  ctx.fillText(info.label, info.x + TEXT_MARGIN, cy, maxWidth);
+  ctx.textAlign = 'right';
+  ctx.fillStyle = WHITE;
+  ctx.fillText(info.text, info.x + info.width - TEXT_MARGIN, cy, maxWidth);
+  const t = info.track;
+  ctx.fillStyle = SLIDER_GROOVE_COLOR;
+  ctx.fillRect(t.x, t.y, t.width, t.height);
+  const knobCenter = info.knob.x + info.knob.width / 2;
+  ctx.fillStyle = WHITE;
+  ctx.fillRect(t.x, t.y, Math.max(0, knobCenter - t.x), t.height);
+  const k = info.knob;
+  ctx.fillStyle = info.pressed ? WHITE : SLIDER_KNOB_FILL;
+  ctx.fillRect(k.x, k.y, k.width, k.height);
+  const border = info.pressed ? SLIDER_KNOB_BORDER_DRAGGING : SLIDER_KNOB_BORDER;
+  ctx.strokeStyle = WHITE;
+  ctx.lineWidth = border;
+  ctx.strokeRect(k.x + border / 2, k.y + border / 2, k.width - border, k.height - border);
+  ctx.restore();
+}
+
+/**
+ * 選択肢の列を描く（選択肢ごとにボタンと同じ地・枠・文字。選ばれているものは地と文字の色を反転する）。
+ * @param {CanvasRenderingContext2D} ctx 描画先
+ * @param {{choices:Array<{x:number,y:number,width:number,height:number,label:string,selected:boolean,pressed:boolean}>,textSize:number}} info 選択肢の列の情報
+ * @returns {void}
+ */
+function drawChoices(ctx, info) {
+  ctx.save();
+  ctx.font = `${info.textSize}px sans-serif`;
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  for (const c of info.choices) {
+    let fill;
+    if (c.selected) {
+      fill = c.pressed ? CHOICE_SELECTED_PRESSED_FILL : WHITE;
+    } else {
+      fill = c.pressed ? PRESSED_FILL : BUTTON_FILL;
+    }
+    ctx.fillStyle = fill;
+    ctx.fillRect(c.x, c.y, c.width, c.height);
+    strokeInside(ctx, c, WHITE);
+    ctx.fillStyle = c.selected ? CHOICE_SELECTED_TEXT : WHITE;
+    ctx.fillText(
+      c.label,
+      c.x + c.width / 2,
+      c.y + c.height / 2,
+      Math.max(0, c.width - TEXT_MARGIN * 2),
+    );
+  }
+  ctx.restore();
+}
+
+/**
  * 標準の見た目: 部品の種類の名前 → 描く関数 (ctx, info) => void。
- * @type {Readonly<Record<'backdrop'|'window'|'titleBar'|'closeButton'|'button'|'value', function(CanvasRenderingContext2D, Object): void>>}
+ * @type {Readonly<Record<'backdrop'|'window'|'titleBar'|'closeButton'|'button'|'value'|'checkbox'|'slider'|'choices', function(CanvasRenderingContext2D, Object): void>>}
  */
 export const STANDARD_LOOK = Object.freeze({
   backdrop: drawBackdrop,
@@ -222,4 +353,7 @@ export const STANDARD_LOOK = Object.freeze({
   closeButton: drawCloseButton,
   button: drawButton,
   value: drawValue,
+  checkbox: drawCheckbox,
+  slider: drawSlider,
+  choices: drawChoices,
 });
