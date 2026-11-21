@@ -46,11 +46,19 @@ test('起動前: 正しい引数の Ui.createWindow も起動前のエラーに�
   assert.throws(() => makeCentered(() => {}), { name: 'Error', message: BEFORE_START });
 });
 
-test('起動後: 戻り値は凍結され、4つの関数だけを持つ', () => {
+test('起動後: 戻り値は凍結され、7つの関数だけを持つ', () => {
   setUiScreenSize(1280, 720);
   const win = makeCentered(() => {});
   assert.equal(Object.isFrozen(win), true);
-  assert.deepEqual(Object.keys(win).sort(), ['addButton', 'addValue', 'draw', 'onPointer']);
+  assert.deepEqual(Object.keys(win).sort(), [
+    'addButton',
+    'addCheckbox',
+    'addChoices',
+    'addSlider',
+    'addValue',
+    'draw',
+    'onPointer',
+  ]);
   for (const key of Object.keys(win)) {
     assert.equal(typeof win[key], 'function');
   }
@@ -87,6 +95,34 @@ test('addButton で足したボタンが、戻り値の onPointer で反応す�
   click(win, 350, 260);
   assert.equal(onPress.count(), 1);
   assert.equal(onClose.count(), 0);
+});
+
+test('addCheckbox・addSlider・addChoices で足した部品が、戻り値の onPointer で反応する', () => {
+  const win = makeCentered(() => {});
+  const writes = [];
+  // 窓の内側の原点は (340, 248)。3つの部品を縦に並べる（画面上の y 248〜、各 100 の間隔）。
+  win.addCheckbox({ x: 0, y: 0, width: 200, height: 50, label: 'C', read: () => false, write: (v) => writes.push(['c', v]) });
+  win.addSlider({ x: 0, y: 100, width: 300, height: 60, label: 'S', min: 0, max: 1, step: 0.5, read: () => 0, write: (v) => writes.push(['s', v]) });
+  win.addChoices({
+    x: 0,
+    y: 200,
+    width: 200,
+    height: 50,
+    choices: [{ label: 'A', value: 'a' }, { label: 'B', value: 'b' }],
+    read: () => 'a',
+    write: (v) => writes.push(['x', v]),
+  });
+  click(win, 350, 260);
+  click(win, 630, 360);
+  click(win, 530, 460);
+  assert.deepEqual(writes, [['c', true], ['s', 1], ['x', 'b']]);
+});
+
+test('addCheckbox・addSlider・addChoices の検証のエラーは戻り値の操作から投げられる', () => {
+  const win = makeCentered(() => {});
+  assert.throws(() => win.addCheckbox(), { name: 'Error', message: /^\[oz\] 窓の addCheckbox: / });
+  assert.throws(() => win.addSlider(), { name: 'Error', message: /^\[oz\] 窓の addSlider: / });
+  assert.throws(() => win.addChoices(), { name: 'Error', message: /^\[oz\] 窓の addChoices: / });
 });
 
 test('addButton の検証のエラーは戻り値の操作から投げられる', () => {

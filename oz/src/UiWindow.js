@@ -1,6 +1,6 @@
 /**
  * 責務: 1つの窓の設定の検証と保持、窓の形の計算、部品の追加と並び、ポインタの振り分け、描くための情報（view）の組み立て。
- * Canvas の操作、部品ごとの押下の中身、値の保存は行わず、UiSpec・UiMetrics・UiRect・UiButton・UiValue だけを import する。
+ * Canvas の操作、部品ごとの押下の中身と値の計算、値の保存は行わず、UiSpec・UiMetrics・UiRect と各部品のファイルだけを import する。
  */
 
 import {
@@ -17,6 +17,9 @@ import { DEFAULT_TITLE_BAR_HEIGHT, DEFAULT_TEXT_SIZE } from './UiMetrics.js';
 import { containsPoint, intersectRect } from './UiRect.js';
 import { UiButton, validateButtonSpec } from './UiButton.js';
 import { UiValue, validateValueSpec } from './UiValue.js';
+import { UiCheckbox, validateCheckboxSpec } from './UiCheckbox.js';
+import { UiSlider, validateSliderSpec } from './UiSlider.js';
+import { UiChoices, validateChoicesSpec } from './UiChoices.js';
 
 /**
  * 論理座標の矩形。
@@ -26,7 +29,7 @@ import { UiValue, validateValueSpec } from './UiValue.js';
 /**
  * 描く関数の種類ごとの、描く情報の1部品分。
  * @typedef {Object} UiPartView
- * @property {string} kind 部品の種類の名前（'button' か 'value'）
+ * @property {string} kind 部品の種類の名前（'button'・'value'・'checkbox'・'slider'・'choices' のどれか）
  * @property {Object} info 描く関数に渡す情報（座標は画面の論理座標）
  */
 
@@ -63,6 +66,15 @@ const BUTTON_PREFIX = '[oz] 窓の addButton:';
 
 /** addValue のエラー文の先頭。 */
 const VALUE_PREFIX = '[oz] 窓の addValue:';
+
+/** addCheckbox のエラー文の先頭。 */
+const CHECKBOX_PREFIX = '[oz] 窓の addCheckbox:';
+
+/** addSlider のエラー文の先頭。 */
+const SLIDER_PREFIX = '[oz] 窓の addSlider:';
+
+/** addChoices のエラー文の先頭。 */
+const CHOICES_PREFIX = '[oz] 窓の addChoices:';
 
 /** 押し始めの持ち主: 窓の外で押し始めた（離したときに閉じる判定を行う）。 */
 const OUTSIDE = Symbol('outside');
@@ -215,6 +227,65 @@ export class UiWindow {
   }
 
   /**
+   * チェックボックスを足す。
+   * @param {Object} spec チェックボックスの設定（x・y・width・height・label・read・write）
+   * @returns {void}
+   * @throws {Error} 設定が正しくないとき（部品は足されない）
+   */
+  addCheckbox(spec) {
+    const s = validateCheckboxSpec(spec, CHECKBOX_PREFIX);
+    const { rect, hitRect } = this.#partRects(s);
+    this.#parts.push(
+      new UiCheckbox({ rect, hitRect, label: s.label, read: s.read, write: s.write }),
+    );
+  }
+
+  /**
+   * スライダーを足す。
+   * @param {Object} spec スライダーの設定（x・y・width・height・label・min・max・step・read・write・format）
+   * @returns {void}
+   * @throws {Error} 設定が正しくないとき（部品は足されない）
+   */
+  addSlider(spec) {
+    const s = validateSliderSpec(spec, SLIDER_PREFIX);
+    const { rect, hitRect } = this.#partRects(s);
+    this.#parts.push(
+      new UiSlider({
+        rect,
+        hitRect,
+        label: s.label,
+        min: s.min,
+        max: s.max,
+        step: s.step,
+        read: s.read,
+        write: s.write,
+        format: s.format,
+      }),
+    );
+  }
+
+  /**
+   * 選択肢の列を足す。
+   * @param {Object} spec 選択肢の列の設定（x・y・width・height・choices・direction・read・write）
+   * @returns {void}
+   * @throws {Error} 設定が正しくないとき（部品は足されない）
+   */
+  addChoices(spec) {
+    const s = validateChoicesSpec(spec, CHOICES_PREFIX);
+    const { rect, hitRect } = this.#partRects(s);
+    this.#parts.push(
+      new UiChoices({
+        rect,
+        hitRect,
+        choices: s.choices,
+        direction: s.direction,
+        read: s.read,
+        write: s.write,
+      }),
+    );
+  }
+
+  /**
    * 部品の画面の矩形と、窓の内側との重なり（押せる範囲）を求める。
    * @param {{x:number,y:number,width:number,height:number}} s 検証済みの設定（窓の内側の左上が原点）
    * @returns {{rect: UiRectangle, hitRect: UiRectangle}} 画面の論理座標の矩形と当たりの矩形
@@ -255,7 +326,7 @@ export class UiWindow {
    * 押し始めの位置から持ち主を決める。
    * @param {number} x 論理座標の x
    * @param {number} y 論理座標の y
-   * @returns {UiButton | UiValue | symbol} 部品、OUTSIDE、または NONE
+   * @returns {UiButton | UiValue | UiCheckbox | UiSlider | UiChoices | symbol} 部品、OUTSIDE、または NONE
    */
   #findOwner(x, y) {
     if (!containsPoint(this.#windowRect, x, y)) return OUTSIDE;

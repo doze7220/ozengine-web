@@ -23,10 +23,13 @@ export function setUiScreenSize(width, height) {
 }
 
 /**
- * 利用側に返す窓のオブジェクト（凍結した4つの操作だけを持つ）。
+ * 利用側に返す窓のオブジェクト（凍結した7つの操作だけを持つ）。
  * @typedef {Object} UiWindowHandle
  * @property {function(Object): void} addButton ボタンを足す（spec は窓の addButton の設定オブジェクト）
  * @property {function(Object): void} addValue 数値・文字の表示を足す（spec は窓の addValue の設定オブジェクト）
+ * @property {function(Object): void} addCheckbox チェックボックスを足す（spec は窓の addCheckbox の設定オブジェクト）
+ * @property {function(Object): void} addSlider スライダーを足す（spec は窓の addSlider の設定オブジェクト）
+ * @property {function(Object): void} addChoices 選択肢の列を足す（spec は窓の addChoices の設定オブジェクト）
  * @property {function(Object): void} onPointer シーンの onPointer で受けたポインタを渡す
  * @property {function(CanvasRenderingContext2D): void} draw 窓を描く（シーンの draw の中で呼ぶ）
  */
@@ -39,7 +42,7 @@ export const Ui = {
   /**
    * 窓を作る。Engine.start の後でだけ使える。
    * @param {Object} options 窓の設定（title, width, height, x, y, onClose, closeOnOutside, titleBarHeight, textSize, look）
-   * @returns {UiWindowHandle} 窓の操作（addButton・addValue・onPointer・draw）
+   * @returns {UiWindowHandle} 窓の操作（addButton・addValue・addCheckbox・addSlider・addChoices・onPointer・draw）
    * @throws {Error} 起動前、または options が正しくない場合
    */
   createWindow(options) {
@@ -53,6 +56,15 @@ export const Ui = {
       },
       addValue(spec) {
         model.addValue(spec);
+      },
+      addCheckbox(spec) {
+        model.addCheckbox(spec);
+      },
+      addSlider(spec) {
+        model.addSlider(spec);
+      },
+      addChoices(spec) {
+        model.addChoices(spec);
       },
       onPointer(pointer) {
         model.onPointer(pointer);

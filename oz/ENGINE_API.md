@@ -1020,14 +1020,17 @@ import { Scene, Ui } from 'oz';
 | `textSize` | 任意 | `36` | 文字の大きさ。正の有限数 |
 | `look` | 任意 | - | 種類ごとの描く関数（`backdrop`・`window`・`titleBar`・`closeButton`・`button`・`value`）。渡した種類はその関数で、渡さなかった種類は標準の見た目で描く |
 
-### 窓の4つの操作
+### 窓の操作
 
-返される窓のオブジェクトは凍結されていて、次の4つだけを持つ。いずれも戻り値は使わない。
+返される窓のオブジェクトは凍結されていて、次の7つだけを持つ。いずれも戻り値は使わない。
 
 | 操作 | 内容 |
 | --- | --- |
 | `addButton(spec)` | ボタンを足す |
 | `addValue(spec)` | 数値・文字の表示を足す |
+| `addCheckbox(spec)` | チェックボックスを足す |
+| `addSlider(spec)` | スライダーを足す |
+| `addChoices(spec)` | 選択肢の列を足す |
 | `onPointer(pointer)` | シーンの `onPointer` で受けたポインタをそのまま渡す |
 | `draw(ctx)` | 窓を描く。シーンの `draw` の中で呼ぶ |
 
@@ -1066,9 +1069,47 @@ import { Scene, Ui } from 'oz';
 
 * 後に足した部品が上に描かれ、押したときも後に足した部品だけが調べられる。矩形は左端・上端を含み、右端・下端を含まない。数値・文字の表示が上にあると、下のボタンは押せない。
 * 文字が部品の幅に収まらないとき、標準の見た目は文字を横に縮めて収める（切らない、はみ出さない）。窓のタイトルも同じ（閉じるボタンの手前までに縮める）。見た目を差し替えたときは、描く関数が扱いを決める（`info` の矩形と文字を渡す）。
-* `label`（関数のとき）・`enabled`・`read`・`format` は、描くたびに呼ばれる（`enabled` は押したとき・離したときにも呼ばれる）。`addButton`・`addValue`・`onPointer` は `label`・`read`・`format` を呼ばない。
+* `label`（関数のとき）・`enabled`・`read`・`format` は、描くたびに呼ばれる（`enabled` は押したとき・離したときにも呼ばれる）。部品を足す操作は `label`・`read`・`write`・`format`・`enabled` を呼ばない。`onPointer` は `label`・`format` を呼ばない。`read` は、数値・文字の表示では `onPointer` から呼ばれないが、チェックボックス・スライダー・選択肢の列では、押したとき・ずらしたとき・離したときにも呼ばれる（`enabled` は押したとき・離したときにも呼ばれる）。
 * `label` が関数のときの戻り値は `String(...)` で文字にする。`enabled` の戻り値は真偽として扱う（偽なら押せない）。
 * 押せないボタンは、押されている見た目にならず、押しても何も起きない。
+
+### `addCheckbox(spec)`・`addSlider(spec)`・`addChoices(spec)`
+
+表にない項目はエラーになる。3種類とも、値を変えるときに `write` を呼ぶ（呼ぶのは窓の `onPointer` の中だけ）。`write` の戻り値は使われない。
+
+`addCheckbox(spec)`（離したとき、`read` の戻り値を真偽にしたものを反転して `write` に渡す）:
+
+| 項目 | 必須 | 既定 | 内容 |
+| --- | --- | --- | --- |
+| `x`・`y`・`width` | 必須 | - | `addButton` と同じ |
+| `height` | 任意 | `88` | 高さ。正の有限数 |
+| `label` | 必須 | - | 項目名。`addButton` の `label` と同じ形 |
+| `read` | 必須 | - | 値を読む関数（引数なし）。戻り値を真偽にしたものが入り（`true`）か切り（`false`） |
+| `write` | 必須 | - | 値を書く関数（引数は新しい真偽 1つ） |
+
+`addSlider(spec)`:
+
+| 項目 | 必須 | 既定 | 内容 |
+| --- | --- | --- | --- |
+| `x`・`y`・`width` | 必須 | - | `addButton` と同じ。`width` は 64 より大きくする |
+| `height` | 任意 | `132` | 高さ。正の有限数 |
+| `label` | 必須 | - | 項目名。`addButton` の `label` と同じ形 |
+| `min`・`max` | 必須 | - | 最小・最大。有限の数値で、`min < max` |
+| `step` | 必須 | - | 刻み。正の有限数で、`max - min` 以下、`max - min` が `step` の整数倍 |
+| `read` | 必須 | - | 値を読む関数（引数なし） |
+| `write` | 必須 | - | 値を書く関数（引数は刻みの値 1つ） |
+| `format` | 任意 | `String(value)` | 読んだ値を値の文字にする関数（`addValue` の `format` と同じ形） |
+
+`addChoices(spec)`:
+
+| 項目 | 必須 | 既定 | 内容 |
+| --- | --- | --- | --- |
+| `x`・`y`・`width` | 必須 | - | `addButton` と同じ |
+| `height` | 任意 | 横なら `88`、縦なら `88 × 選択肢の数` | 列の全体の高さ。正の有限数 |
+| `choices` | 必須 | - | 選択肢の配列。要素は `{ label, value }`（`label` は文字列か、描くたびに呼ぶ関数。`value` は `undefined` 以外の値）。1つ以上で、`value` が `===` で同じものを2つ持たない |
+| `direction` | 任意 | `'horizontal'` | 並べる向き。`'horizontal'`（幅を等分して横に並べる）か `'vertical'`（高さを等分して縦に並べる） |
+| `read` | 必須 | - | 値を読む関数（引数なし）。戻り値と `===` で同じ `value` の選択肢が選ばれている |
+| `write` | 必須 | - | 値を書く関数（引数は選ばれた選択肢の `value`） |
 
 ### 値のつなぎ方
 
@@ -1134,6 +1175,9 @@ class SettingsScene extends Scene {
 | `closeButton` | `x`・`y`・`width`・`height`、`pressed`、`textSize`、`label`（常に `''`）、`enabled`（常に `true`） |
 | `button` | `x`・`y`・`width`・`height`、`label`、`pressed`、`enabled`、`textSize` |
 | `value` | `x`・`y`・`width`・`height`、`label`、`value`（`read` の戻り値）、`text`（`format` で整えた文字）、`textSize` |
+| `checkbox` | `x`・`y`・`width`・`height`、`label`、`checked`（`Boolean(read())`）、`pressed`、`textSize` |
+| `slider` | `x`・`y`・`width`・`height`、`label`、`value`（`read` の戻り値）、`text`（`format` で整えた文字）、`min`・`max`・`step`、`textRow`（文字の段）・`track`（溝）・`knob`（つまみ）（いずれも `{ x, y, width, height }`）、`pressed`（ドラッグ中か）、`textSize` |
+| `choices` | `x`・`y`・`width`・`height`（列の全体）、`direction`、`choices`（選択肢ごとの `{ x, y, width, height, label, value, selected, pressed }` の配列）、`textSize` |
 
 `closeButton` の `label` と `enabled` は、部品のボタンと同じ形の情報なので入る（`label` は常に空文字、`enabled` は常に `true`）。
 
