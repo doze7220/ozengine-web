@@ -30,6 +30,8 @@ let buttons = null;
 let keys = null;
 /** @type {VirtualPads|null} バーチャルパッドが有効なときの VirtualPads。起動前と無効のときは null */
 let pads = null;
+/** @type {DebugOverlay|null} 起動後の DebugOverlay。起動前は null */
+let overlay = null;
 
 /**
  * 正の有限数かを判定する。
@@ -118,7 +120,7 @@ export const Engine = {
    * @param {string[]} config.layers 奥から手前の順のレイヤー名（空でない配列）
    * @param {Scene} config.scene 最初のシーン（Scene のインスタンス）
    * @param {number} [config.tickRate=60] 1秒あたりのティック数（正の有限数）
-   * @param {boolean} [config.debug=false] true なら FPS を表示する
+   * @param {boolean} [config.debug=false] true なら FPS を表示した状態で始める
    * @param {boolean} [config.virtualPad=false] true ならバーチャルパッドの仕組みを有効にする
    * @returns {void}
    * @throws {Error} 設定が正しくない場合、または2回目の呼び出しの場合
@@ -140,9 +142,11 @@ export const Engine = {
     const newKeys = new Keys();
     const newPads = Boolean(config.virtualPad) ? new VirtualPads() : null;
     const newInput = new Input({ canvas: config.canvas, screen, scenes: newScenes, buttons: newButtons, keys: newKeys, pads: newPads });
-    const overlay = Boolean(config.debug) ? new DebugOverlay(config.width, config.height) : null;
-    const loop = new GameLoop({ ctx, time: newTime, scenes: newScenes, layers, input: newInput, overlay });
+    const newOverlay = new DebugOverlay(config.width, config.height);
+    newOverlay.visible = Boolean(config.debug);
+    const loop = new GameLoop({ ctx, time: newTime, scenes: newScenes, layers, input: newInput, overlay: newOverlay });
 
+    overlay = newOverlay;
     time = newTime;
     scenes = newScenes;
     buttons = newButtons;

@@ -17,7 +17,7 @@ export class GameLoop {
   #layers;
   /** @type {{dispatch: function(): void}} */
   #input;
-  /** @type {{update: function(number): void, draw: function(CanvasRenderingContext2D): void}|null} */
+  /** @type {{update: function(number): void, draw: function(CanvasRenderingContext2D): void}} 常に渡される DebugOverlay インスタンス */
   #overlay;
 
   /**
@@ -27,7 +27,7 @@ export class GameLoop {
    * @param {object} deps.scenes Scenes インスタンス
    * @param {object} deps.layers Layers インスタンス
    * @param {object} deps.input Input インスタンス
-   * @param {object|null} deps.overlay DebugOverlay インスタンス。表示しない場合は null
+   * @param {object} deps.overlay DebugOverlay インスタンス（常に渡される。表示の有無は DebugOverlay が持つ）
    */
   constructor({ ctx, time, scenes, layers, input, overlay }) {
     this.#ctx = ctx;
@@ -72,10 +72,8 @@ export class GameLoop {
       }
     }
     this.#layers.render(this.#ctx, scenes, time.view);
-    if (this.#overlay) {
-      this.#overlay.update(time.view.realDelta);
-      this.#overlay.draw(this.#ctx);
-    }
+    this.#overlay.update(time.view.realDelta);
+    this.#overlay.draw(this.#ctx);
     requestAnimationFrame((next) => this.#frame(next));
   }
 }
