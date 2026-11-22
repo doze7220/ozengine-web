@@ -1,6 +1,6 @@
 /**
- * 責務: 土台の FPS の表示の切り替え（OFF → 左上 → 右上 → 右下 → 左下 → OFF の順）、今の状態を表す項目の文字、
- * 選択肢の値での読み書き。
+ * 責務: 土台の FPS の表示の切り替え（OFF → 左上 → 右上 → 右下 → 左下 → OFF の順）、表示の位置の選択肢と、
+ * 今の状態を表す文字。
  */
 /* ozengine sample */
 import { Engine } from 'oz';
@@ -27,6 +27,30 @@ export const FPS_CHOICES = Object.freeze([
   Object.freeze({ label: OFF_LABEL, value: OFF_VALUE }),
   ...CYCLE.map((position) => Object.freeze({ label: POSITION_LABELS[position], value: position })),
 ]);
+
+/**
+ * FPS の表示の位置の選択肢（左上・右上・右下・左下。選択肢の列の choices に渡す）。
+ * @type {ReadonlyArray<{ label: string, value: string }>}
+ */
+export const FPS_POSITION_CHOICES = Object.freeze(
+  CYCLE.map((position) => Object.freeze({ label: POSITION_LABELS[position], value: position })),
+);
+
+/**
+ * 今の FPS の表示の位置の文字を返す（読み取りのみ。draw から呼んでよい。表示を消している間も位置を返す）。
+ * @returns {string} 位置の文字（'左上' など）
+ */
+export function fpsPositionText() {
+  return POSITION_LABELS[Engine.fpsPosition];
+}
+
+/**
+ * 今の FPS の表示の状態を表す文字を返す（読み取りのみ。draw から呼んでよい）。
+ * @returns {string} 表示を消していれば 'OFF'、出していれば位置の文字
+ */
+export function fpsStatusText() {
+  return Engine.fpsVisible ? fpsPositionText() : OFF_LABEL;
+}
 
 /**
  * 今の FPS の表示の状態を表す文字を返す（読み取りのみ。draw から呼んでよい）。
