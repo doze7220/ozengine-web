@@ -60,7 +60,10 @@ import { containsPoint } from './UiRect.js';
 /** スライダーの設定で使ってよい項目名の一覧。これ以外の項目名はエラーにする。 */
 const ALLOWED = ['x', 'y', 'width', 'height', 'label', 'min', 'max', 'step', 'read', 'write', 'format'];
 
-/** max - min が step の整数倍かを判定するときに許す相対の誤差（刻みの数 k に掛けて使う）。 */
+/**
+ * max - min が step の整数倍かを判定するときに許す相対の誤差（刻みの数 k に掛けて使う）。
+ * step が max - min 以下かの判定にも使う（(max - min) / step が 1 - この値より小さいときだけエラー）。
+ */
 const MULTIPLE_TOLERANCE = 1e-9;
 
 /**
@@ -114,7 +117,7 @@ export function validateSliderSpec(spec, prefix) {
     throw new Error(`${prefix} max は min より大きくしてください`);
   }
   checkPositive(spec.step, 'step', prefix);
-  if (spec.step > spec.max - spec.min) {
+  if ((spec.max - spec.min) / spec.step < 1 - MULTIPLE_TOLERANCE) {
     throw new Error(`${prefix} step は max - min 以下にしてください`);
   }
   if (countSteps(spec.min, spec.max, spec.step) < 0) {
