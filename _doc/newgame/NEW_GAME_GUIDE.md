@@ -316,7 +316,7 @@ grep -rn "ozengine sample" index.html js assets
 *   手順2・3の `-r`（`xargs` の入力が空なら実行しない）は、目印がすでに無いときに、`rm`・`sed` が空の引数でエラーにならないようにするためである。
 *   手順2の `/* ozengine sample */` は固定の文字列で、範囲の目印（`/* ozengine sample: begin */`）には一致しない。
 *   空になったフォルダ（`js/scenes/` など）は残してよい。git は空のフォルダを記録しない。
-*   現在の土台では、手順を終えると `js/` には次の5ファイルが残る。期待する結果: `js/main.js`、`js/scenes/BootScene.js`、`js/scenes/MenuScene.js`、`js/ui/virtualPadConfig.js`、`js/ui/virtualPadView.js`（`find js -type f` で5つだけ出る）。これらは boot 画面（最初の入力を受ける画面）、バーチャルパッド（画面のスティックとボタン）、メニューの仕組みで、目印が付いていない（`BootScene.js` の押した瞬間の SE の部分は目印が付いていたので消える）。`js/main.js` の `import` は `'oz'` と `./scenes/BootScene.js` だけになり、残りの3つ（`MenuScene.js`・`virtualPadConfig.js`・`virtualPadView.js`）はどこからも読み込まれないので、起動には影響しない。7章の7-4 に使い方を書いてある。
+*   現在の土台では、手順を終えると `js/` には次の6ファイルが残る。期待する結果: `js/main.js`、`js/scenes/BootScene.js`、`js/scenes/MenuScene.js`、`js/scenes/WindowScene.js`、`js/ui/virtualPadConfig.js`、`js/ui/virtualPadView.js`（`find js -type f` で6つだけ出る）。これらは boot 画面（最初の入力を受ける画面）、バーチャルパッド（画面のスティックとボタン）、メニューの仕組み、窓を置くシーンで、目印が付いていない（`BootScene.js` の押した瞬間の SE の部分は目印が付いていたので消える）。`js/main.js` の `import` は `'oz'` と `./scenes/BootScene.js` だけになり、残りの4つ（`MenuScene.js`・`WindowScene.js`・`virtualPadConfig.js`・`virtualPadView.js`）は `main.js` から読み込まれないので、起動には影響しない（`WindowScene.js` は `virtualPadConfig.js` を読み込むが、`WindowScene.js` 自体がどこからも読み込まれない）。7章の7-4 に使い方を書いてある。
 
 ### 6-3. 見本の素材を消す（Claude Code が行う）
 目印を消すと、見本のコードが使っていた素材（画像、音、スプライト）が参照されなくなる。参照されていない素材を、次の順に消す。
@@ -370,6 +370,7 @@ grep -rn "ozengine sample" index.html js assets
 *   `js/main.js` の `virtualPad`（画面のスティックとボタンを使うか。7-4）。
 *   `js/ui/virtualPadConfig.js` のパッドの定義（配置、キー、画像のファイル名。7-4）。
 *   メニューの項目（`js/scenes/MenuScene.js` に渡す項目。7-4）。
+*   窓の中身（`js/scenes/WindowScene.js` に渡す、窓を作る関数。7-4）。
 
 ### 7-2. 起動の確認（発注者）
 1.  ふだん使っている静的サーバで、`<ゲームのフォルダ>` をルートにして `index.html` を開く。`file://` で開いても動かない（`oz/ENGINE_API.md` 1章）。
@@ -382,7 +383,7 @@ grep -rn "ozengine sample" index.html js assets
 
 エラーが出る、または設定が効かないときは、そこで止めて、原因を調べる（立ち上げの Step 1 に進まない）。
 
-### 7-4. 目印を消した後に残る仕組み（boot 画面、バーチャルパッドとメニュー）
+### 7-4. 目印を消した後に残る仕組み（boot 画面、バーチャルパッドとメニュー、窓を置くシーン）
 6章で目印を消した後も、次の仕組みは `js/` に残る。ゲームの Phase の REQ で使い方を指示する（コードを書くのは Claude Code である）。
 
 **boot 画面（`js/scenes/BootScene.js`）**
@@ -394,7 +395,7 @@ grep -rn "ozengine sample" index.html js assets
 **バーチャルパッドの ON / OFF（`js/main.js`）**
 *   `virtualPad: true`（既定）のまま、スマートフォンなど指で触れる端末で開く → 画面を指で触れたあとに、パッドが定義されたシーンでスティックとボタンが出る。パッドが定義されていないシーン（空のシーンなど）では何も出ない。マウスとキーボードだけの PC では出ない。
 *   `virtualPad: true` を `false` に変える → スマートフォンで触れても、スティックとボタンが出ない。既定の画像も読み込まれない。PC の操作は変わらない。
-*   パッドを使わないゲームは `false` にしてよい。このときも、下の3ファイルと画像は消さずに残してよい。
+*   パッドを使わないゲームは `false` にしてよい。このときも、下の「使わないゲームでは」に挙げた `.js` と画像は消さずに残してよい。
 
 **パッドの定義と描画を使う（`js/ui/virtualPadConfig.js` と `js/ui/virtualPadView.js`）**
 *   `virtualPadConfig.js` には、スティックとボタンの配置、割り当てるキー、画像のファイル名が書かれている。ゲームの REQ で「プレイのシーンでこの定義を使ってパッドを出す」と指示する → そのシーンでパッドが動き、押すとキーボードを押したときと同じ動きになる。
@@ -408,11 +409,20 @@ grep -rn "ozengine sample" index.html js assets
 
 **メニューの仕組み（`js/scenes/MenuScene.js`）**
 *   プレイ中に開く、項目が縦に並んだメニューの仕組みである。ゲームの REQ で「このゲームのメニューの項目は〇〇」と指示すると、その項目が並ぶ。
-*   土台のメニューの項目（閉じる・スロー・ミュート・FPS・UI の見本・タイトルに戻る）は見本なので、6章で消える。ゲームでは自分の項目を渡して使う。
+*   土台のメニューの項目（閉じる・開発用パネル・設定・タイトルに戻る）は見本なので、6章で消える。ゲームでは自分の項目を渡して使う。
 *   メニューが開いている間は、下のシーンは止まる。項目の外を押しても何も起きない。
 
+**窓を置くシーン（`js/scenes/WindowScene.js`）**
+*   窓（`oz/ENGINE_API.md` 26章の UI 部品の窓）を1つ置いて、今の画面の上に積むシーンである。ゲームの REQ で「この窓を開く」と指示すると、その窓が開く。
+*   使い方は `openWindow({ layer, createWindow })` である。`layer` には窓を描くレイヤー名を、`createWindow` には窓を作って返す関数（`Ui.createWindow` で窓を作り、部品を足して返す）を渡す → シーンが積まれて窓が開く。
+*   窓の `onClose` で `Engine.popScene()` する → 窓が閉じて、下の画面に戻る。閉じるための関数は別に無い。
+*   窓が開いている間は、下のシーンは止まる。
+*   背面と同じ配置のパッド（`js/ui/virtualPadConfig.js` の `VIRTUAL_PAD_LAYOUT`）を、このシーンも登録している。登録しないと、背面のパッドの位置を押した指が窓の外の押下になり、外を押すと閉じる窓が閉じてしまうためである（26章「注意」）。背面の配置が違う画面の上に置くときは、REQ でこのシーンを直すよう指示する。`virtualPad: false` のときも、そのまま使える。
+*   土台の開発用パネルと設定画面は見本なので、6章で消える。ゲームでは自分の窓を作る関数を渡して使う。
+*   UI 部品の既定の大きさは、横長のゲームを縦に持ったスマートフォンでは小さい。26章「既定の大きさ」を見る。
+
 **使わないゲームでは**
-*   `virtualPad` を `false` にし、メニューも使わないなら、3つの `.js` と画像はそのまま残してよい。どこからも読み込まれないので、起動に影響しない。
+*   `virtualPad` を `false` にし、メニューも窓も使わないなら、4つの `.js`（`MenuScene.js`・`WindowScene.js`・`virtualPadConfig.js`・`virtualPadView.js`）と画像はそのまま残してよい。どこからも読み込まれないので、起動に影響しない。
 
 ## 8. 憲法と開発資料にエンジンについて書く
 
