@@ -1,10 +1,10 @@
 /**
- * 責務: 素材のロード中の表示と、ミュート設定の反映、ロード完了後に渡された次の画面への切り替え。
+ * 責務: 素材のロード中の表示と、音の設定の反映、ロード完了後に渡された次の画面への切り替え。
  */
 /* ozengine sample */
 import { Assets, Engine, Scene } from 'oz';
 import { loadVirtualPadImages } from '../ui/virtualPadView.js';
-import { openMute } from './mute.js';
+import { openSoundSettings } from './soundSettings.js';
 import { drawMuteLabel, drawText } from './uiText.js';
 
 /**
@@ -41,11 +41,11 @@ export class LoadScene extends Scene {
   }
 
   /**
-   * ミュート設定を反映し、素材をロードして、終わったら次の画面へ切り替える。
+   * 音の設定を反映し、素材をロードして、終わったら次の画面へ切り替える。
    * @returns {void}
    */
   init() {
-    openMute();
+    openSoundSettings();
     Promise.all([Assets.load(ASSET_LIST), loadVirtualPadImages()]).then(() => Engine.changeScene(this.next()));
   }
 

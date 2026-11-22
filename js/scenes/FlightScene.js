@@ -8,7 +8,7 @@ import { Ship } from '../entities/Ship.js';
 import { Stars } from '../effect/Stars.js';
 import { Trail } from '../effect/Trail.js';
 import { Wind } from '../effect/Wind.js';
-import { toggleMute } from './mute.js';
+import { toggleMute } from './soundSettings.js';
 import { drawMuteLabel } from './uiText.js';
 
 /**

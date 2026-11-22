@@ -2,7 +2,7 @@
  * 責務: ui レイヤーに描く文字（汎用の文字、右上の状態表示）の共通処理。
  */
 /* ozengine sample */
-import { isMuted } from './mute.js';
+import { isMuted } from './soundSettings.js';
 
 /** 文字の色 */
 const TEXT_COLOR = '#ffffff';

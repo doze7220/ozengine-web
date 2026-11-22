@@ -5,7 +5,7 @@
 import { Engine, Sound, Ui } from 'oz';
 import { SAMPLE_LOOK } from './uiSampleLook.js';
 import { isSlow, setSlow } from './slow.js';
-import { isMuted, setMuted } from './mute.js';
+import { isMuted, setMuted } from './soundSettings.js';
 import { FPS_CHOICES, readFpsChoice, writeFpsChoice } from './fps.js';
 
 /**

@@ -4,7 +4,7 @@
 /* ozengine sample */
 import { openMenu, closeMenu } from './MenuScene.js';
 import { isSlow, toggleSlow, resetSlow } from './slow.js';
-import { isMuted, toggleMute } from './mute.js';
+import { isMuted, toggleMute } from './soundSettings.js';
 import { fpsLabel, cycleFps } from './fps.js';
 import { openUiSample } from './uiSample.js';
 
