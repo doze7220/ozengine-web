@@ -1,6 +1,6 @@
 /**
- * 責務: 1つの窓の設定の検証と保持、窓の形の計算、部品の追加と並び、ポインタの振り分け、描くための情報（view）の組み立て。
- * Canvas の操作、部品ごとの押下の中身と値の計算、値の保存は行わず、UiSpec・UiMetrics・UiRect・UiButton（閉じるボタン）・UiPartKinds だけを import する。
+ * 責務: 1つの窓の設定の検証と保持、窓の形の計算、部品・タブの列・スクロールする領域の追加と並び、タブによる出し分け、ポインタの振り分け、描くための情報（view）の組み立て。
+ * Canvas の操作、タブの切り替え・スクロールの計算・タップとドラッグの区別の中身、部品ごとの押下の中身と値の計算、値の保存は行わず、UiSpec・UiMetrics・UiRect・UiButton（閉じるボタン）・UiPartKinds・UiTabs・UiScroll だけを import する。
  */
 
 import {
@@ -17,6 +17,8 @@ import { DEFAULT_TITLE_BAR_HEIGHT, DEFAULT_TEXT_SIZE } from './UiMetrics.js';
 import { containsPoint, intersectRect } from './UiRect.js';
 import { UiButton } from './UiButton.js';
 import { PART_KINDS } from './UiPartKinds.js';
+import { UiTabs, validateTabsSpec } from './UiTabs.js';
+import { UiScroll, validateScrollSpec } from './UiScroll.js';
 
 /**
  * 論理座標の矩形。
@@ -26,8 +28,25 @@ import { PART_KINDS } from './UiPartKinds.js';
 /**
  * 描く関数の種類ごとの、描く情報の1部品分。
  * @typedef {Object} UiPartView
- * @property {string} kind 部品の種類の名前（'button'・'value'・'checkbox'・'slider'・'choices' のどれか）
+ * @property {string} kind 部品の種類の名前（'button'・'value'・'checkbox'・'slider'・'choices'・'tabs' のどれか）
  * @property {Object} info 描く関数に渡す情報（座標は画面の論理座標）
+ */
+
+/**
+ * view() の部品の情報1つ分。スクロールする領域だけ、中の部品と位置の表示の情報を持つ。
+ * @typedef {UiPartView | import('./UiScroll.js').ScrollView} UiWindowPartView
+ */
+
+/**
+ * 窓の部品の並びの1つ。tab は入っているタブの番号（どのタブにも入れないものは null）。
+ * @typedef {Object} UiWindowEntry
+ * @property {Object} part 部品（UiButton など、タブの列、スクロールする領域のどれか）
+ * @property {number | null} tab 入っているタブの番号か null
+ */
+
+/**
+ * ポインタの持ち主になれるもの（hitTest・pointerDown の後に pointerMove・pointerUp を受ける部品）。
+ * @typedef {{pointerMove: function(number, number): void, pointerUp: function(number, number): void}} UiPointerOwner
  */
 
 /**
@@ -38,7 +57,7 @@ import { PART_KINDS } from './UiPartKinds.js';
  * @property {{x:number,y:number,width:number,height:number,title:string,textSize:number}} titleBar タイトルバーの情報
  * @property {{x:number,y:number,width:number,height:number,label:string,pressed:boolean,enabled:boolean,textSize:number}} closeButton 閉じるボタンの情報
  * @property {UiRectangle} content 窓の内側の矩形（部品の切り取りに使う）
- * @property {UiPartView[]} parts 部品の情報（足した順）
+ * @property {UiWindowPartView[]} parts 出ている部品の情報（足した順。選ばれていないタブの部品は含まない）
  */
 
 /** Ui.createWindow の options で使ってよい項目名の一覧。これ以外の項目名はエラーにする。 */
@@ -112,7 +131,10 @@ export class UiWindow {
   #contentRect;
   #backdropRect;
   #closeButton;
+  /** @type {UiWindowEntry[]} */
   #parts = [];
+  /** @type {UiTabs | null} タブの列（1つまで。無ければ null） */
+  #tabs = null;
   #capture = null;
 
   /**
@@ -183,65 +205,129 @@ export class UiWindow {
   /**
    * ボタンを足す。
    * @param {Object} spec ボタンの設定（x・y・width・height・label・onPress・enabled）
+   * @param {number | null} [tab] 入れるタブの番号（Ui.js だけが渡す。検証しない。省略か undefined で窓に直接足す）
    * @returns {void}
    * @throws {Error} 設定が正しくないとき（部品は足されない）
    */
-  addButton(spec) {
-    this.#addPart('addButton', spec);
+  addButton(spec, tab) {
+    this.#addPart('addButton', spec, tab);
   }
 
   /**
    * 数値・文字の表示を足す。
    * @param {Object} spec 表示の設定（x・y・width・height・label・read・format）
+   * @param {number | null} [tab] 入れるタブの番号（Ui.js だけが渡す。検証しない。省略か undefined で窓に直接足す）
    * @returns {void}
    * @throws {Error} 設定が正しくないとき（部品は足されない）
    */
-  addValue(spec) {
-    this.#addPart('addValue', spec);
+  addValue(spec, tab) {
+    this.#addPart('addValue', spec, tab);
   }
 
   /**
    * チェックボックスを足す。
    * @param {Object} spec チェックボックスの設定（x・y・width・height・label・read・write）
+   * @param {number | null} [tab] 入れるタブの番号（Ui.js だけが渡す。検証しない。省略か undefined で窓に直接足す）
    * @returns {void}
    * @throws {Error} 設定が正しくないとき（部品は足されない）
    */
-  addCheckbox(spec) {
-    this.#addPart('addCheckbox', spec);
+  addCheckbox(spec, tab) {
+    this.#addPart('addCheckbox', spec, tab);
   }
 
   /**
    * スライダーを足す。
    * @param {Object} spec スライダーの設定（x・y・width・height・label・min・max・step・read・write・format）
+   * @param {number | null} [tab] 入れるタブの番号（Ui.js だけが渡す。検証しない。省略か undefined で窓に直接足す）
    * @returns {void}
    * @throws {Error} 設定が正しくないとき（部品は足されない）
    */
-  addSlider(spec) {
-    this.#addPart('addSlider', spec);
+  addSlider(spec, tab) {
+    this.#addPart('addSlider', spec, tab);
   }
 
   /**
    * 選択肢の列を足す。
    * @param {Object} spec 選択肢の列の設定（x・y・width・height・choices・direction・read・write）
+   * @param {number | null} [tab] 入れるタブの番号（Ui.js だけが渡す。検証しない。省略か undefined で窓に直接足す）
    * @returns {void}
    * @throws {Error} 設定が正しくないとき（部品は足されない）
    */
-  addChoices(spec) {
-    this.#addPart('addChoices', spec);
+  addChoices(spec, tab) {
+    this.#addPart('addChoices', spec, tab);
+  }
+
+  /**
+   * タブの列を足す（1つの窓に1つまで。タブには入れられない）。
+   * @param {Object} spec タブの列の設定（x・y・width・height・labels）
+   * @param {number | null} [tab] 入れるタブの番号（Ui.js だけが渡す。検証しない。null でなければエラー）
+   * @returns {number} タブの数
+   * @throws {Error} tab が null でないとき、すでにタブの列があるとき、設定が正しくないとき（足されない）
+   */
+  addTabs(spec, tab = null) {
+    if (tab !== null) {
+      throw new Error('[oz] タブの addTabs: タブの列はタブに入れられません');
+    }
+    if (this.#tabs !== null) {
+      throw new Error('[oz] 窓の addTabs: タブの列は1つの窓に1つまでです');
+    }
+    const s = validateTabsSpec(spec, '[oz] 窓の addTabs:');
+    const { rect, hitRect } = this.#partRects(s);
+    const tabs = new UiTabs({ rect, hitRect, labels: s.labels });
+    this.#tabs = tabs;
+    this.#parts.push({ part: tabs, tab: null });
+    return s.labels.length;
+  }
+
+  /**
+   * スクロールする領域を足す。
+   * @param {Object} spec 領域の設定（x・y・width・height）
+   * @param {number | null} [tab] 入れるタブの番号（Ui.js だけが渡す。検証しない。省略か undefined で窓に直接足す）
+   * @returns {UiScroll} 作った領域（中に部品を足す操作を持つ）
+   * @throws {Error} 設定が正しくないとき（足されない）
+   */
+  addScroll(spec, tab) {
+    const t = tab === undefined ? null : tab;
+    const s = validateScrollSpec(spec, this.#prefix('addScroll', t));
+    const { rect } = this.#partRects(s);
+    const scroll = new UiScroll({ rect, clipRect: this.#contentRect });
+    this.#parts.push({ part: scroll, tab: t });
+    return scroll;
+  }
+
+  /**
+   * エラー文の先頭を作る（tab が null なら窓、そうでなければタブ）。
+   * @param {string} op 足す操作の名前
+   * @param {number | null} tab タブの番号か null
+   * @returns {string} エラー文の先頭
+   */
+  #prefix(op, tab) {
+    return tab === null ? `[oz] 窓の ${op}:` : `[oz] タブの ${op}:`;
   }
 
   /**
    * 5種類の部品のどれかを、検証して矩形を求め、並びに足す。
    * @param {string} op 足す操作の名前（PART_KINDS のキー）
    * @param {Object} spec 部品の設定
+   * @param {number | null | undefined} tab 入れるタブの番号（undefined は null と同じ）
    * @returns {void}
    * @throws {Error} 設定が正しくないとき（部品は足されない）
    */
-  #addPart(op, spec) {
+  #addPart(op, spec, tab) {
+    const t = tab === undefined ? null : tab;
     const kind = PART_KINDS[op];
-    const s = kind.validate(spec, `[oz] 窓の ${op}:`);
+    const s = kind.validate(spec, this.#prefix(op, t));
     const { rect, hitRect } = this.#partRects(s);
-    this.#parts.push(kind.create(s, rect, hitRect));
+    this.#parts.push({ part: kind.create(s, rect, hitRect), tab: t });
+  }
+
+  /**
+   * 部品が出ているか（どのタブにも入っていない、または選ばれているタブに入っている）。
+   * @param {UiWindowEntry} entry 部品の並びの1つ
+   * @returns {boolean} 出ていれば true
+   */
+  #isShown(entry) {
+    return entry.tab === null || (this.#tabs !== null && entry.tab === this.#tabs.selected);
   }
 
   /**
@@ -285,7 +371,7 @@ export class UiWindow {
    * 押し始めの位置から持ち主を決める。
    * @param {number} x 論理座標の x
    * @param {number} y 論理座標の y
-   * @returns {UiButton | UiValue | UiCheckbox | UiSlider | UiChoices | symbol} 部品、OUTSIDE、または NONE
+   * @returns {UiPointerOwner | symbol} 持ち主になる部品（閉じるボタン・5種類の部品・タブの列・スクロールする領域）、OUTSIDE、または NONE
    */
   #findOwner(x, y) {
     if (!containsPoint(this.#windowRect, x, y)) return OUTSIDE;
@@ -294,7 +380,9 @@ export class UiWindow {
     }
     if (containsPoint(this.#contentRect, x, y)) {
       for (let i = this.#parts.length - 1; i >= 0; i--) {
-        const part = this.#parts[i];
+        const entry = this.#parts[i];
+        if (!this.#isShown(entry)) continue;
+        const part = entry.part;
         if (part.hitTest(x, y)) return part.pointerDown(x, y) ? part : NONE;
       }
     }
@@ -316,7 +404,11 @@ export class UiWindow {
       titleBar: { x: b.x, y: b.y, width: b.width, height: b.height, title: this.#title, textSize: t },
       closeButton: this.#closeButton.info(t),
       content: { x: c.x, y: c.y, width: c.width, height: c.height },
-      parts: this.#parts.map((part) => ({ kind: part.kind, info: part.info(t) })),
+      parts: this.#parts
+        .filter((entry) => this.#isShown(entry))
+        .map(({ part }) =>
+          part.kind === 'scroll' ? part.view(t) : { kind: part.kind, info: part.info(t) },
+        ),
     };
   }
 }
