@@ -1,6 +1,6 @@
 /**
  * 責務: 1つの窓の設定の検証と保持、窓の形の計算、部品の追加と並び、ポインタの振り分け、描くための情報（view）の組み立て。
- * Canvas の操作、部品ごとの押下の中身と値の計算、値の保存は行わず、UiSpec・UiMetrics・UiRect と各部品のファイルだけを import する。
+ * Canvas の操作、部品ごとの押下の中身と値の計算、値の保存は行わず、UiSpec・UiMetrics・UiRect・UiButton（閉じるボタン）・UiPartKinds だけを import する。
  */
 
 import {
@@ -15,11 +15,8 @@ import {
 } from './UiSpec.js';
 import { DEFAULT_TITLE_BAR_HEIGHT, DEFAULT_TEXT_SIZE } from './UiMetrics.js';
 import { containsPoint, intersectRect } from './UiRect.js';
-import { UiButton, validateButtonSpec } from './UiButton.js';
-import { UiValue, validateValueSpec } from './UiValue.js';
-import { UiCheckbox, validateCheckboxSpec } from './UiCheckbox.js';
-import { UiSlider, validateSliderSpec } from './UiSlider.js';
-import { UiChoices, validateChoicesSpec } from './UiChoices.js';
+import { UiButton } from './UiButton.js';
+import { PART_KINDS } from './UiPartKinds.js';
 
 /**
  * 論理座標の矩形。
@@ -60,21 +57,6 @@ const ALLOWED = [
 
 /** 窓の設定のエラー文の先頭。 */
 const CREATE_PREFIX = '[oz] Ui.createWindow:';
-
-/** addButton のエラー文の先頭。 */
-const BUTTON_PREFIX = '[oz] 窓の addButton:';
-
-/** addValue のエラー文の先頭。 */
-const VALUE_PREFIX = '[oz] 窓の addValue:';
-
-/** addCheckbox のエラー文の先頭。 */
-const CHECKBOX_PREFIX = '[oz] 窓の addCheckbox:';
-
-/** addSlider のエラー文の先頭。 */
-const SLIDER_PREFIX = '[oz] 窓の addSlider:';
-
-/** addChoices のエラー文の先頭。 */
-const CHOICES_PREFIX = '[oz] 窓の addChoices:';
 
 /** 押し始めの持ち主: 窓の外で押し始めた（離したときに閉じる判定を行う）。 */
 const OUTSIDE = Symbol('outside');
@@ -205,11 +187,7 @@ export class UiWindow {
    * @throws {Error} 設定が正しくないとき（部品は足されない）
    */
   addButton(spec) {
-    const s = validateButtonSpec(spec, BUTTON_PREFIX);
-    const { rect, hitRect } = this.#partRects(s);
-    this.#parts.push(
-      new UiButton({ rect, hitRect, label: s.label, onPress: s.onPress, enabled: s.enabled }),
-    );
+    this.#addPart('addButton', spec);
   }
 
   /**
@@ -219,11 +197,7 @@ export class UiWindow {
    * @throws {Error} 設定が正しくないとき（部品は足されない）
    */
   addValue(spec) {
-    const s = validateValueSpec(spec, VALUE_PREFIX);
-    const { rect, hitRect } = this.#partRects(s);
-    this.#parts.push(
-      new UiValue({ rect, hitRect, label: s.label, read: s.read, format: s.format }),
-    );
+    this.#addPart('addValue', spec);
   }
 
   /**
@@ -233,11 +207,7 @@ export class UiWindow {
    * @throws {Error} 設定が正しくないとき（部品は足されない）
    */
   addCheckbox(spec) {
-    const s = validateCheckboxSpec(spec, CHECKBOX_PREFIX);
-    const { rect, hitRect } = this.#partRects(s);
-    this.#parts.push(
-      new UiCheckbox({ rect, hitRect, label: s.label, read: s.read, write: s.write }),
-    );
+    this.#addPart('addCheckbox', spec);
   }
 
   /**
@@ -247,21 +217,7 @@ export class UiWindow {
    * @throws {Error} 設定が正しくないとき（部品は足されない）
    */
   addSlider(spec) {
-    const s = validateSliderSpec(spec, SLIDER_PREFIX);
-    const { rect, hitRect } = this.#partRects(s);
-    this.#parts.push(
-      new UiSlider({
-        rect,
-        hitRect,
-        label: s.label,
-        min: s.min,
-        max: s.max,
-        step: s.step,
-        read: s.read,
-        write: s.write,
-        format: s.format,
-      }),
-    );
+    this.#addPart('addSlider', spec);
   }
 
   /**
@@ -271,18 +227,21 @@ export class UiWindow {
    * @throws {Error} 設定が正しくないとき（部品は足されない）
    */
   addChoices(spec) {
-    const s = validateChoicesSpec(spec, CHOICES_PREFIX);
+    this.#addPart('addChoices', spec);
+  }
+
+  /**
+   * 5種類の部品のどれかを、検証して矩形を求め、並びに足す。
+   * @param {string} op 足す操作の名前（PART_KINDS のキー）
+   * @param {Object} spec 部品の設定
+   * @returns {void}
+   * @throws {Error} 設定が正しくないとき（部品は足されない）
+   */
+  #addPart(op, spec) {
+    const kind = PART_KINDS[op];
+    const s = kind.validate(spec, `[oz] 窓の ${op}:`);
     const { rect, hitRect } = this.#partRects(s);
-    this.#parts.push(
-      new UiChoices({
-        rect,
-        hitRect,
-        choices: s.choices,
-        direction: s.direction,
-        read: s.read,
-        write: s.write,
-      }),
-    );
+    this.#parts.push(kind.create(s, rect, hitRect));
   }
 
   /**
