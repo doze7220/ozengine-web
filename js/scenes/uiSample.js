@@ -1,12 +1,13 @@
 /**
  * 責務: UI の見本の窓（05-02 の見本）の中身（2種類の窓の設定、部品の並びと位置、見た目の切り替え）と、
- * 2つの見本の窓（05-02 の見本、値を変える部品の見本）の開き方と切り替え。
+ * 3つの見本の窓（05-02 の見本、値を変える部品の見本、タブとスクロールの見本）の開き方と切り替え。
  */
 /* ozengine sample */
 import { Engine, Ui } from 'oz';
 import { UiSampleScene } from './UiSampleScene.js';
 import { SAMPLE_LOOK } from './uiSampleLook.js';
 import { createValueSampleWindow } from './uiValueSample.js';
+import { createTabSampleWindow } from './uiTabSample.js';
 import { isSlow, toggleSlow, resetSlow } from './slow.js';
 
 /**
@@ -31,9 +32,9 @@ const ROW3_Y = 232;
 const ROW4_Y = 336;
 /** 5行目のボタンの上端 */
 const ROW5_Y = 440;
-/** 1行に並ぶ2つの表示の幅 */
+/** 1行に横に並べる2つの部品の幅 */
 const HALF_WIDTH = 268;
-/** 2つ目の表示の左端 */
+/** 横に並べる2つ目の部品の左端 */
 const RIGHT_LEFT = 308;
 /** 1行に1つのボタンの幅 */
 const FULL_WIDTH = 552;
@@ -60,6 +61,8 @@ const RESET_SLOW_LABEL = '等速に戻す';
 const SWITCH_LOOK_LABEL = '見た目を切り替える';
 /** 値を変える部品の見本へ進むボタンの文言 */
 const TO_VALUE_SAMPLE_LABEL = '値を変える部品へ';
+/** タブとスクロールの見本へ進むボタンの文言 */
+const TO_TAB_SAMPLE_LABEL = 'タブとスクロールへ';
 
 /**
  * 見本の窓を作り、部品を足して返す。
@@ -113,11 +116,21 @@ export function createSampleWindow(style) {
   win.addButton({
     x: PART_LEFT,
     y: ROW5_Y,
-    width: FULL_WIDTH,
+    width: HALF_WIDTH,
     label: TO_VALUE_SAMPLE_LABEL,
     onPress: () => {
       Engine.popScene();
       openValueSample(style);
+    },
+  });
+  win.addButton({
+    x: RIGHT_LEFT,
+    y: ROW5_Y,
+    width: HALF_WIDTH,
+    label: TO_TAB_SAMPLE_LABEL,
+    onPress: () => {
+      Engine.popScene();
+      openTabSample(style);
     },
   });
   return win;
@@ -151,6 +164,31 @@ export function openValueSample(style) {
           switchLook: () => {
             Engine.popScene();
             openValueSample(style === 'custom' ? 'standard' : 'custom');
+          },
+        }),
+    }),
+  );
+}
+
+/**
+ * タブとスクロールの見本の窓を置いたシーンを最前面に積んで開く。
+ * 「最初の見本へ」で UI の見本の同じ種類へ、「見た目を切り替える」でタブとスクロールの見本の他方の種類へ替わる。
+ * @param {SampleStyle} style 見本の窓の種類
+ * @returns {void}
+ */
+export function openTabSample(style) {
+  Engine.pushScene(
+    new UiSampleScene({
+      layer: SAMPLE_LAYER,
+      createWindow: () =>
+        createTabSampleWindow(style, {
+          backToFirst: () => {
+            Engine.popScene();
+            openUiSample(style);
+          },
+          switchLook: () => {
+            Engine.popScene();
+            openTabSample(style === 'custom' ? 'standard' : 'custom');
           },
         }),
     }),
