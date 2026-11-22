@@ -1,6 +1,6 @@
 /**
  * 責務: UI の見本の、差し替えた見た目（暗幕・窓・タイトルバー・閉じるボタン・ボタン・数値・文字の表示・
- * チェックボックス・スライダー・選択肢の列の9種類の描く関数）。
+ * チェックボックス・スライダー・選択肢の列・タブの列・スクロールする領域・位置の表示の12種類の描く関数）。
  */
 /* ozengine sample */
 
@@ -60,6 +60,16 @@ const CHECKBOX_LINE_WIDTH = 4;
 const KNOB_RIM_WIDTH = 4;
 /** 選択肢の矩形からの内側への余白 */
 const CHOICE_INSET = 4;
+/** タブの矩形からの内側への余白 */
+const TAB_INSET = 4;
+/** スクロールする領域の地の色 */
+const SCROLL_FILL = '#f3e9d2';
+/** スクロールする領域の枠の色 */
+const SCROLL_STROKE = '#e0c9a0';
+/** スクロールする領域の枠の太さ */
+const SCROLL_STROKE_WIDTH = 2;
+/** 位置の表示の帯の色 */
+const SCROLL_BAR_TRACK_FILL = 'rgba(211, 84, 0, 0.2)';
 
 /**
  * 角の丸い矩形の道筋を作る（arcTo で書く。ctx.roundRect は古い Safari に無いため使わない）。塗りも線も描かない。
@@ -293,8 +303,61 @@ function drawChoices(ctx, { choices }) {
 }
 
 /**
- * 差し替えた見た目（Ui.createWindow の look に渡す。9種類すべて）。
- * @type {{ backdrop: Function, window: Function, titleBar: Function, closeButton: Function, button: Function, value: Function, checkbox: Function, slider: Function, choices: Function }}
+ * タブの列を描く（タブごとに、矩形より少し内側の角の丸い矩形と文字）。
+ * @param {CanvasRenderingContext2D} ctx 描画先
+ * @param {{ tabs: { x: number, y: number, width: number, height: number, label: string, selected: boolean, pressed: boolean }[] }} info 列の全体と、タブごとの矩形・文字・状態
+ * @returns {void}
+ */
+function drawTabs(ctx, { tabs }) {
+  ctx.font = FONT;
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  for (const t of tabs) {
+    const w = t.width - TAB_INSET * 2;
+    const h = t.height - TAB_INSET * 2;
+    roundRectPath(ctx, t.x + TAB_INSET, t.y + TAB_INSET, w, h, VALUE_RADIUS);
+    ctx.fillStyle = t.pressed ? BUTTON_FILL_PRESSED : t.selected ? ACCENT_COLOR : VALUE_FILL;
+    ctx.fill();
+    ctx.fillStyle = t.selected || t.pressed ? WHITE : VALUE_LABEL_COLOR;
+    ctx.fillText(t.label, t.x + t.width / 2, t.y + t.height / 2, Math.max(0, w - TEXT_PADDING * 2));
+  }
+}
+
+/**
+ * スクロールする領域の地と枠を描く（矩形の内側に収める）。
+ * @param {CanvasRenderingContext2D} ctx 描画先
+ * @param {{ x: number, y: number, width: number, height: number }} info 領域の矩形
+ * @returns {void}
+ */
+function drawScroll(ctx, { x, y, width, height }) {
+  roundRectPath(ctx, x, y, width, height, VALUE_RADIUS);
+  ctx.fillStyle = SCROLL_FILL;
+  ctx.fill();
+  const half = SCROLL_STROKE_WIDTH / 2;
+  roundRectPath(ctx, x + half, y + half, width - SCROLL_STROKE_WIDTH, height - SCROLL_STROKE_WIDTH, VALUE_RADIUS - half);
+  ctx.strokeStyle = SCROLL_STROKE;
+  ctx.lineWidth = SCROLL_STROKE_WIDTH;
+  ctx.stroke();
+}
+
+/**
+ * スクロールの位置の表示を描く（角の丸い帯と、角の丸いつまみ）。
+ * @param {CanvasRenderingContext2D} ctx 描画先
+ * @param {{ x: number, y: number, width: number, height: number, thumb: { x: number, y: number, width: number, height: number }, dragging: boolean }} info 帯・つまみの矩形とドラッグ中か
+ * @returns {void}
+ */
+function drawScrollBar(ctx, { x, y, width, height, thumb, dragging }) {
+  roundRectPath(ctx, x, y, width, height, width / 2);
+  ctx.fillStyle = SCROLL_BAR_TRACK_FILL;
+  ctx.fill();
+  roundRectPath(ctx, thumb.x, thumb.y, thumb.width, thumb.height, Math.min(thumb.width, thumb.height) / 2);
+  ctx.fillStyle = dragging ? CLOSE_FILL : ACCENT_COLOR;
+  ctx.fill();
+}
+
+/**
+ * 差し替えた見た目（Ui.createWindow の look に渡す。12種類すべて）。
+ * @type {{ backdrop: Function, window: Function, titleBar: Function, closeButton: Function, button: Function, value: Function, checkbox: Function, slider: Function, choices: Function, tabs: Function, scroll: Function, scrollBar: Function }}
  */
 export const SAMPLE_LOOK = {
   backdrop: drawBackdrop,
@@ -306,4 +369,7 @@ export const SAMPLE_LOOK = {
   checkbox: drawCheckbox,
   slider: drawSlider,
   choices: drawChoices,
+  tabs: drawTabs,
+  scroll: drawScroll,
+  scrollBar: drawScrollBar,
 };
