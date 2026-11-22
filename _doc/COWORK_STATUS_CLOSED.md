@@ -127,3 +127,8 @@
 
 **持ち越し（`COWORK_STATUS.md` 3章）**
 * UI 部品で作っていない口3つ（スクロールする領域の下の余白、選択肢の列の項目名、窓を置くシーンのパッドの配置を渡す口）と、縦長のゲームで既定の大きさが合うかを新たに足した。
+
+#### Phase 05 → 06 の棚卸し（2026-11-22）
+* **ログの移動:** Phase 05 の DIR・REQ・RES と、Phase 05 の間に行った Interrupt（261120_1545）の REQ・RES を `_log/dir/closed/`・`_log/req/closed/`・`_log/res/closed/` へ移した。移動後のパスに直したのは `COWORK_STATUS.md` の中だけ（`_doc/PROJECT_PHASE_TRANSITION_CLEANUP.md` 4章）。
+* **`PROJECT_ARCHITECTURE.md`:** Phase 05 で足した記載（3章の UI 部品のファイルの並びと中の向き、4章の `Ui`〜`UiStandardLook`・`DebugOverlay`・`js/scenes/` の行、自動テストの規則の対象）を実コードと照らして監査した。ファイルの並び・import の向き・`js/scenes/` のファイルは実コードと一致し、コードを追う記述・比喩・重複は無く、削る所は無かった。
+* **`COWORK_STATUS.md`:** Phase 05 の現況とクローズの記録を要約して残し、解決・破棄した項目は本ファイルへ移した（上の「Phase 05 クローズ」）。
