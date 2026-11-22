@@ -72,6 +72,24 @@ const CHOICE_SELECTED_TEXT = '#202020';
 /** 選ばれていて押されている選択肢の地の色。 */
 const CHOICE_SELECTED_PRESSED_FILL = '#c0c0c0';
 
+/** 選ばれていないタブの文字の色。 */
+const TAB_TEXT_COLOR = '#c0c0c0';
+
+/** 選ばれているタブの下端の帯の太さ。 */
+const TAB_SELECTED_BAR_HEIGHT = 6;
+
+/** スクロールする領域の地の色。 */
+const SCROLL_FILL = '#181818';
+
+/** スクロールする領域の枠の色。 */
+const SCROLL_STROKE = '#606060';
+
+/** スクロールの位置の表示の帯の色。 */
+const SCROLL_BAR_TRACK_FILL = 'rgba(255, 255, 255, 0.15)';
+
+/** スクロールの位置の表示のつまみの色。 */
+const SCROLL_BAR_THUMB_FILL = '#c0c0c0';
+
 /**
  * 矩形の情報。
  * @typedef {Object} LookRect
@@ -343,8 +361,77 @@ function drawChoices(ctx, info) {
 }
 
 /**
+ * タブの列を描く（タブごとに地・枠・文字。選ばれているものは窓の地と同じ地・白の文字・下端の帯）。
+ * @param {CanvasRenderingContext2D} ctx 描画先
+ * @param {{x:number,y:number,width:number,height:number,tabs:Array<{x:number,y:number,width:number,height:number,label:string,selected:boolean,pressed:boolean}>,textSize:number}} info タブの列の情報
+ * @returns {void}
+ */
+function drawTabs(ctx, info) {
+  ctx.save();
+  ctx.font = `${info.textSize}px sans-serif`;
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  for (const t of info.tabs) {
+    if (t.pressed) {
+      ctx.fillStyle = PRESSED_FILL;
+    } else {
+      ctx.fillStyle = t.selected ? WINDOW_FILL : BUTTON_FILL;
+    }
+    ctx.fillRect(t.x, t.y, t.width, t.height);
+    if (t.selected) {
+      ctx.fillStyle = WHITE;
+      ctx.fillRect(
+        t.x,
+        t.y + t.height - BORDER_WIDTH - TAB_SELECTED_BAR_HEIGHT,
+        t.width,
+        TAB_SELECTED_BAR_HEIGHT,
+      );
+    }
+    strokeInside(ctx, t, WHITE);
+    ctx.fillStyle = t.selected ? WHITE : TAB_TEXT_COLOR;
+    ctx.fillText(
+      t.label,
+      t.x + t.width / 2,
+      t.y + t.height / 2,
+      Math.max(0, t.width - TEXT_MARGIN * 2),
+    );
+  }
+  ctx.restore();
+}
+
+/**
+ * スクロールする領域の地と枠を描く。
+ * @param {CanvasRenderingContext2D} ctx 描画先
+ * @param {{x:number,y:number,width:number,height:number,scrollY:number,contentHeight:number,scrollable:boolean,dragging:boolean,textSize:number}} info 領域の情報
+ * @returns {void}
+ */
+function drawScroll(ctx, info) {
+  ctx.save();
+  ctx.fillStyle = SCROLL_FILL;
+  ctx.fillRect(info.x, info.y, info.width, info.height);
+  strokeInside(ctx, info, SCROLL_STROKE);
+  ctx.restore();
+}
+
+/**
+ * スクロールの位置の表示（帯とつまみ）を描く。
+ * @param {CanvasRenderingContext2D} ctx 描画先
+ * @param {{x:number,y:number,width:number,height:number,thumb:LookRect,scrollY:number,contentHeight:number,dragging:boolean}} info 位置の表示の情報
+ * @returns {void}
+ */
+function drawScrollBar(ctx, info) {
+  ctx.save();
+  ctx.fillStyle = SCROLL_BAR_TRACK_FILL;
+  ctx.fillRect(info.x, info.y, info.width, info.height);
+  const t = info.thumb;
+  ctx.fillStyle = info.dragging ? WHITE : SCROLL_BAR_THUMB_FILL;
+  ctx.fillRect(t.x, t.y, t.width, t.height);
+  ctx.restore();
+}
+
+/**
  * 標準の見た目: 部品の種類の名前 → 描く関数 (ctx, info) => void。
- * @type {Readonly<Record<'backdrop'|'window'|'titleBar'|'closeButton'|'button'|'value'|'checkbox'|'slider'|'choices', function(CanvasRenderingContext2D, Object): void>>}
+ * @type {Readonly<Record<'backdrop'|'window'|'titleBar'|'closeButton'|'button'|'value'|'checkbox'|'slider'|'choices'|'tabs'|'scroll'|'scrollBar', function(CanvasRenderingContext2D, Object): void>>}
  */
 export const STANDARD_LOOK = Object.freeze({
   backdrop: drawBackdrop,
@@ -356,4 +443,7 @@ export const STANDARD_LOOK = Object.freeze({
   checkbox: drawCheckbox,
   slider: drawSlider,
   choices: drawChoices,
+  tabs: drawTabs,
+  scroll: drawScroll,
+  scrollBar: drawScrollBar,
 });
