@@ -305,7 +305,7 @@ test('LOOK_KINDS のすべての名前を渡せ、渡した順に写される', 
 });
 
 test('LOOK_KINDS の中身と凍結', () => {
-  assert.deepEqual([...LOOK_KINDS], ['backdrop', 'window', 'titleBar', 'closeButton', 'button', 'value', 'checkbox', 'slider', 'choices']);
+  assert.deepEqual([...LOOK_KINDS], ['backdrop', 'window', 'titleBar', 'closeButton', 'button', 'value', 'checkbox', 'slider', 'choices', 'tabs', 'scroll', 'scrollBar']);
   assert.ok(Object.isFrozen(LOOK_KINDS));
 });
 

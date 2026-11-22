@@ -18,6 +18,9 @@ export const LOOK_KINDS = Object.freeze([
   'checkbox',
   'slider',
   'choices',
+  'tabs',
+  'scroll',
+  'scrollBar',
 ]);
 
 /**

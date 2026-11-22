@@ -1018,11 +1018,11 @@ import { Scene, Ui } from 'oz';
 | `closeOnOutside` | 任意 | `true` | 窓の外を押して離したら閉じるか。`true` か `false` |
 | `titleBarHeight` | 任意 | `88` | タイトルバーの高さ。閉じるボタンは、この長さの正方形 |
 | `textSize` | 任意 | `36` | 文字の大きさ。正の有限数 |
-| `look` | 任意 | - | 種類ごとの描く関数（`backdrop`・`window`・`titleBar`・`closeButton`・`button`・`value`・`checkbox`・`slider`・`choices` の9つ）。渡した種類はその関数で、渡さなかった種類は標準の見た目で描く |
+| `look` | 任意 | - | 種類ごとの描く関数（`backdrop`・`window`・`titleBar`・`closeButton`・`button`・`value`・`checkbox`・`slider`・`choices`・`tabs`・`scroll`・`scrollBar` の12の種類）。渡した種類はその関数で、渡さなかった種類は標準の見た目で描く |
 
 ### 窓の操作
 
-返される窓のオブジェクトは凍結されていて、次の7つだけを持つ。いずれも戻り値は使わない。
+返される窓のオブジェクトは凍結されていて、次の9つだけを持つ。`addTabs`・`addScroll` 以外の戻り値は使わない。
 
 | 操作 | 内容 |
 | --- | --- |
@@ -1031,6 +1031,8 @@ import { Scene, Ui } from 'oz';
 | `addCheckbox(spec)` | チェックボックスを足す |
 | `addSlider(spec)` | スライダーを足す |
 | `addChoices(spec)` | 選択肢の列を足す |
+| `addTabs(spec)` | タブの列を足す（1つの窓に1つまで）。タブごとのオブジェクトの配列（凍結。`labels` の順）を返す |
+| `addScroll(spec)` | スクロールする領域を足す。領域のオブジェクトを返す |
 | `onPointer(pointer)` | シーンの `onPointer` で受けたポインタをそのまま渡す |
 | `draw(ctx)` | 窓を描く。シーンの `draw` の中で呼ぶ |
 
@@ -1110,6 +1112,30 @@ import { Scene, Ui } from 'oz';
 | `direction` | 任意 | `'horizontal'` | 並べる向き。`'horizontal'`（幅を等分して横に並べる）か `'vertical'`（高さを等分して縦に並べる） |
 | `read` | 必須 | - | 値を読む関数（引数なし）。戻り値と `===` で同じ `value` の選択肢が選ばれている |
 | `write` | 必須 | - | 値を書く関数（引数は選ばれた選択肢の `value`） |
+
+### `addTabs(spec)`・`addScroll(spec)`
+
+表にない項目はエラーになる。位置 `x`・`y` は窓の内側の左上が原点（ほかの部品と同じ）。
+
+`addTabs(spec)`（タブの列。幅を `labels` の数で等分する。離したとき、押し始めたタブの上であればそのタブが選ばれる）:
+
+| 項目 | 必須 | 既定 | 内容 |
+| --- | --- | --- | --- |
+| `x`・`y`・`width` | 必須 | - | `addButton` と同じ |
+| `height` | 任意 | `88` | 列の高さ。正の有限数 |
+| `labels` | 必須 | - | タブの名前の配列。要素は文字列か、描くたびに呼ぶ関数（`addButton` の `label` と同じ形）。1つ以上。足した時点で写して持つ |
+
+`addScroll(spec)`（スクロールする領域。縦にずらして見る）:
+
+| 項目 | 必須 | 既定 | 内容 |
+| --- | --- | --- | --- |
+| `x`・`y` | 必須 | - | 窓の内側の左上を原点とする位置（論理座標）。有限の数値。タブに入れた領域も同じ |
+| `width`・`height` | 必須 | - | 領域の見せる範囲の大きさ。正の有限数 |
+
+* `addTabs` が返す配列の要素（タブのオブジェクト。凍結）は、`addButton`・`addValue`・`addCheckbox`・`addSlider`・`addChoices`・`addScroll`・`addTabs` の7つの操作を持つ。5種類と `addScroll` で足したものは、そのタブに入る（位置の原点は窓の内側の左上）。`addTabs` は呼ぶと必ずエラー（タブの列はタブに入れられない）。
+* `addScroll` が返す領域のオブジェクト（凍結）も、同じ7つの操作を持つ。5種類で足したものは領域の中に入り（位置の原点は領域の中身の左上）、`addTabs`・`addScroll` は呼ぶと必ずエラー（入れられない組み合わせ）。5種類の項目と動きは、窓に足すときと同じ。
+* 窓の `addScroll` とタブの `addScroll` は、どちらも領域のオブジェクトを返す。タブに入れていない部品は、どのタブが選ばれていても出る。
+* 領域の中の部品は、領域の矩形と窓の内側で切り取られる。タブの切り替わり方、スクロールの動き、領域の中の部品のポインタの受け方の詳しい決まりは、この章の後の節に書く。
 
 ### 値のつなぎ方
 
@@ -1272,7 +1298,7 @@ class OptionsScene extends Scene {
 
 差し替えても、押せる範囲（部品の矩形と窓の内側の重なり、閉じるボタンの正方形、窓の全体）は変わらない。描く関数は矩形の内側に描くことを勧める（はみ出しても押せる範囲は変わらない。部品は窓の内側で切り取られる）。`look` に渡した種類だけがその関数になり、渡さなかった種類は標準の見た目になる。同じ `look` のオブジェクトを複数の窓に渡して、絵柄をそろえられる。標準の見た目を描く関数は公開されていない。スライダーの位置と値の対応（溝とつまみの形、刻み、遊び）と、選択肢の等分も、差し替えても変わらない。描く関数は、渡された `track`・`knob` と選択肢の矩形のとおりに描けばよい。選択肢の列は、列の全体を1回の呼び出しで描く（選択肢ごとに呼ばれない）。つながった形（区切りの線、両端だけの角の丸みなど）を描く関数が決められる。
 
-`look` の種類は `backdrop`（暗幕）、`window`（窓の地と枠）、`titleBar`（タイトルバーとタイトルの文字）、`closeButton`（閉じるボタン）、`button`（部品のボタン）、`value`（数値・文字の表示）、`checkbox`（チェックボックス）、`slider`（スライダー）、`choices`（選択肢の列）の9つ。知らない名前、関数でない値はエラーになる。
+`look` の種類は `backdrop`（暗幕）、`window`（窓の地と枠）、`titleBar`（タイトルバーとタイトルの文字）、`closeButton`（閉じるボタン）、`button`（部品のボタン）、`value`（数値・文字の表示）、`checkbox`（チェックボックス）、`slider`（スライダー）、`choices`（選択肢の列）、`tabs`（タブの列）、`scroll`（スクロールする領域の地と枠）、`scrollBar`（スクロールの位置の表示）の12の種類。知らない名前、関数でない値はエラーになる。
 
 | 種類 | `info` の項目 |
 | --- | --- |
@@ -1352,7 +1378,7 @@ class SettingsScene extends Scene {
 
 ### エラー
 
-* すべて `Error`（先頭に `[oz] Ui.createWindow:`、窓の `addButton` は `[oz] 窓の addButton:`、`addValue` は `[oz] 窓の addValue:`、`addCheckbox` は `[oz] 窓の addCheckbox:`、`addSlider` は `[oz] 窓の addSlider:`、`addChoices` は `[oz] 窓の addChoices:`）。項目名を含む。上から順に調べ、最初に当たったものを投げる。エラーのときは、窓は作られず、部品は足されない。
+* すべて `Error`（先頭に `[oz] Ui.createWindow:`、窓の `addButton` は `[oz] 窓の addButton:`、`addValue` は `[oz] 窓の addValue:`、`addCheckbox` は `[oz] 窓の addCheckbox:`、`addSlider` は `[oz] 窓の addSlider:`、`addChoices` は `[oz] 窓の addChoices:`、`addTabs` は `[oz] 窓の addTabs:`、`addScroll` は `[oz] 窓の addScroll:`。タブのオブジェクトの操作は `[oz] タブの <操作名>:`、領域のオブジェクトの操作は `[oz] スクロールする領域の <操作名>:`）。項目名を含む。上から順に調べ、最初に当たったものを投げる。エラーのときは、窓は作られず、部品は足されない。
 * `Engine.start` の前の `Ui.createWindow` はエラー（`[oz] Ui.createWindow: Engine.start の前には使えません`）。この判定は引数の検証より先に行う。
 * 知らない項目はエラーにする（書き間違い `closeOnOutsde` などが既定の動きに黙って戻るのを防ぐため）。「書かれていて」は `undefined` でないこと（`null` はエラー）。
 * フレーム処理の中でエラーを起こすと、ほかの例外と同じくループが止まる（15章）。

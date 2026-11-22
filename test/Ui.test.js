@@ -46,7 +46,7 @@ test('起動前: 正しい引数の Ui.createWindow も起動前のエラーに�
   assert.throws(() => makeCentered(() => {}), { name: 'Error', message: BEFORE_START });
 });
 
-test('起動後: 戻り値は凍結され、7つの関数だけを持つ', () => {
+test('起動後: 戻り値は凍結され、9つの関数だけを持つ', () => {
   setUiScreenSize(1280, 720);
   const win = makeCentered(() => {});
   assert.equal(Object.isFrozen(win), true);
@@ -54,7 +54,9 @@ test('起動後: 戻り値は凍結され、7つの関数だけを持つ', () =>
     'addButton',
     'addCheckbox',
     'addChoices',
+    'addScroll',
     'addSlider',
+    'addTabs',
     'addValue',
     'draw',
     'onPointer',
