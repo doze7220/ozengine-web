@@ -8,8 +8,8 @@ import { isMuted } from './soundSettings.js';
 const TEXT_COLOR = '#ffffff';
 /** 状態表示の右端の余白（px） */
 const LABEL_MARGIN_RIGHT = 20;
-/** 状態表示の1行目の y 座標（px） */
-const LABEL_FIRST_Y = 30;
+/** 状態表示の1行目の y 座標（px）。右上の FPS の表示（y 約 6〜26）と重ならない位置 */
+const LABEL_FIRST_Y = 50;
 /** 状態表示の行の間隔（px） */
 const LABEL_LINE_HEIGHT = 36;
 /** 状態表示のフォント */
