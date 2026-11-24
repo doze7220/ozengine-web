@@ -4,6 +4,7 @@
 import { Engine, Scene } from 'oz';
 /* ozengine sample: begin */
 import { Sound } from 'oz';
+import { SOUND } from '../names.js';
 /* ozengine sample: end */
 
 /**
@@ -23,7 +24,7 @@ const BOOT_TEXT_COLOR = '#ffffff';
 const BOOT_FONT = '48px sans-serif';
 /* ozengine sample: begin */
 /** 押した瞬間に鳴らす SE の名前 */
-const BOOT_SE = 'se';
+const BOOT_SE = SOUND.se;
 /* ozengine sample: end */
 
 /** 最初の入力を受け、押す（離す）かキーを押すと次の画面へ進む画面 */

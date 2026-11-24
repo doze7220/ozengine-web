@@ -3,7 +3,7 @@
  */
 /* ozengine sample */
 import { Assets, Engine, Sound } from 'oz';
-import { LAYER } from '../names.js';
+import { LAYER, IMAGE, SOUND } from '../names.js';
 import { steerByAutopilot } from '../entities/autopilot.js';
 import { FlightScene } from './FlightScene.js';
 import { PlayScene } from './PlayScene.js';
@@ -12,9 +12,9 @@ import { drawText } from './uiText.js';
 /** BGM のフェードインの長さ（ミリ秒） */
 const BGM_FADE_MS = 1000;
 /** BGM の素材名 */
-const BGM_NAME = 'bgm';
+const BGM_NAME = SOUND.bgm;
 /** 画像の素材名 */
-const IMAGE_NAME = 'sample';
+const IMAGE_NAME = IMAGE.sample;
 /** 文字を描くレイヤー名 */
 const UI_LAYER = LAYER.ui;
 

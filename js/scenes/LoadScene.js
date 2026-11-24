@@ -3,7 +3,7 @@
  */
 /* ozengine sample */
 import { Assets, Engine, Scene } from 'oz';
-import { LAYER } from '../names.js';
+import { LAYER, IMAGE, SOUND } from '../names.js';
 import { loadVirtualPadImages } from '../ui/virtualPadView.js';
 import { openSoundSettings } from './soundSettings.js';
 import { drawMuteLabel, drawText } from './uiText.js';
@@ -14,10 +14,10 @@ import { drawMuteLabel, drawText } from './uiText.js';
 
 /** ロードする素材の一覧（パスは index.html からの相対） */
 const ASSET_LIST = {
-  images: { sample: './assets/images/sample.png' },
+  images: { [IMAGE.sample]: './assets/images/sample.png' },
   sounds: {
-    se: './assets/sounds/sample_se.mp3',
-    bgm: './assets/sounds/sample_bgm.mp3',
+    [SOUND.se]: './assets/sounds/sample_se.mp3',
+    [SOUND.bgm]: './assets/sounds/sample_bgm.mp3',
   },
 };
 /** 「ロード中」の表示文字 */
