@@ -10,7 +10,7 @@
 import { Engine, Scene, Assets, Sound, Storage, CanvasCache, Ui } from 'oz';
 ```
 
-* `Engine` : 起動、シーンの操作、`timeScale` の読み書き、FPS の表示の出し入れと位置、FPS の値の読み取り（14章）、ボタンの登録、キーの状態の取得、バーチャルパッドの登録と状態の取得
+* `Engine` : 起動、開発モードの読み取り（3章）、シーンの操作、`timeScale` の読み書き、FPS の表示の出し入れと位置、FPS の値の読み取り（14章）、ボタンの登録、キーの状態の取得、バーチャルパッドの登録と状態の取得
 * `Scene` : シーンの基底クラス
 * `Assets` : 画像と音声のロードと取得
 * `Sound` : 音の再生と音量
@@ -68,7 +68,7 @@ import { Engine, Scene, Assets, Sound, Storage, CanvasCache, Ui } from 'oz';
 | `layers` | 必須 | - | レイヤー名の配列。空でない。奥から手前の順 |
 | `scene` | 必須 | - | 最初のシーン。`Scene` のインスタンス（クラスそのものはエラー） |
 | `tickRate` | 任意 | `60` | 1秒あたりの `update` のティック数。正の有限数 |
-| `debug` | 任意 | `false` | 真なら FPS を表示した状態で始める（`Engine.fpsVisible` の起動時の値。14章）。真偽は `Boolean(...)` で解釈し、型の検証はしない |
+| `debug` | 任意 | `false` | 真なら開発モードで起動する（`Engine.debug` が `true` になり、FPS を表示した状態で始まる。下の「開発モード」）。真偽は `Boolean(...)` で解釈し、型の検証はしない |
 | `virtualPad` | 任意 | `false` | 真ならバーチャルパッド（画面のスティックとボタン。24章）の仕組みを有効にする。真偽は `Boolean(...)` で解釈し、型の検証はしない |
 
 最小の起動例:
@@ -84,6 +84,34 @@ Engine.start({
   scene: new Scene(),
 });
 ```
+
+### 開発モード（`debug` と `Engine.debug`）
+
+起動設定 `debug` は、開発モードで起動するかどうかを表す。ゲームは `Engine.debug` で読み、開発用の入口（開発用のキーやメニューの項目など）を出すかどうかを決める。
+
+| API | 読み書き | 値 |
+| --- | --- | --- |
+| `Engine.debug` | 読み取りのみ | 起動設定 `debug` を `Boolean(...)` で解釈した `true` / `false`（`debug` を省くと `false`） |
+
+* **読める時期:** `Engine.start` の後。最初のシーンの `init` の中でも読める。`Engine.start` の前に作るシーンの `constructor` では読めない（エラー）ので、`init` の中か、それより後に読む。
+* **変わらない:** 値は `Engine.start` のときに決まり、その後は変わらない。変える方法は無い。
+* **FPS の表示との関係:** 真なら FPS を表示した状態（左上）で、偽なら表示しない状態で始まる。起動した後の `Engine.fpsVisible`（14章）と `Engine.debug` は互いに影響しない。FPS の表示を消しても `Engine.debug` は変わらず、開発モードでなくても `Engine.fpsVisible` で FPS を表示できる。
+* **ほかの動きは変わらない:** エンジンは、開発モードかどうかで、起動時の FPS の表示のほかの動き（FPS の計算、警告、`timeScale`、入力、描画など）を変えない。開発用の入口を隠すのはゲームである。
+* **真にする条件:** エンジンは URL などを見ない。どういうときに `debug` を真にするかは、`Engine.start` を呼ぶ側が決めて渡す。
+
+使い方の例（開発用のキーを、開発モードのときだけ受け付ける）:
+
+```js
+onKeyDown(code) {
+  if (code === 'KeyF' && Engine.debug) Engine.fpsVisible = !Engine.fpsVisible;
+}
+```
+
+エラー:
+
+* **起動前に読む:** `Error`（`[oz] Engine.debug: Engine.start の前には使えません`）。
+* **代入:** 起動の前後にかかわらず、strict モードのコード（ES Modules の中。ゲームのコードは常にこれ）では `TypeError` で、値は変わらない。strict でないコード（開発者ツールのコンソールなど）ではエラーにならず無視され、値は変わらない。
+* フレーム処理の中でこれらのエラーを起こすと、ほかの例外と同じくループが止まる（15章）。
 
 ## 4. 画面
 
@@ -221,11 +249,11 @@ FPS（1秒あたりのフレーム数）を画面の四隅のどれかに表示�
 
 | API | 読み書き | 値 | 既定 |
 |---|---|---|---|
-| `Engine.fpsVisible` | 読み書き | `true`（表示）/ `false`（非表示） | 起動設定 `debug` を `Boolean(...)` にした値（`debug` を省くと `false`） |
+| `Engine.fpsVisible` | 読み書き | `true`（表示）/ `false`（非表示） | 起動時の `Engine.debug` と同じ値（起動設定 `debug` の真偽。`debug` を省くと `false`。3章） |
 | `Engine.fps` | 読み取りのみ | 整数の FPS。起動から約1秒は `null` | `null` |
 | `Engine.fpsPosition` | 読み書き | `'top-left'`・`'top-right'`・`'bottom-left'`・`'bottom-right'` | `'top-left'` |
 
-* 起動設定 `debug` は、`Engine.fpsVisible` の起動時の値だけを決める（3章）。位置は起動設定では指定できない（起動後に `Engine.fpsPosition` で変える）。
+* 起動設定 `debug`（開発モード。3章）が真なら FPS を表示した状態で、偽なら表示しない状態で始まる。起動した後は、`Engine.fpsVisible` を変えても `Engine.debug` は変わらず、開発モードでなくても `Engine.fpsVisible` で表示できる。位置は起動設定では指定できない（起動後に `Engine.fpsPosition` で変える）。
 
 ```js
 // 毎フレームの draw で、FPS の値を読んで文字を描く（draw の中では読むだけ）

@@ -1,7 +1,7 @@
 /**
- * @fileoverview 責務: 起動設定の受け取りと各モジュールの初期化、公開操作（シーン操作、timeScale、ボタン・キー・バーチャルパッド、
- * FPS の表示の有無・位置の読み書きと値の読み取り）の各モジュールへの委譲、キャンバスキャッシュへの画素の倍率の求め方と UI 部品への論理解像度の受け渡し。
- * ゲームループの中身や描画処理は持たない。
+ * @fileoverview 責務: 起動設定の受け取りと各モジュールの初期化、開発モード（起動設定 debug の真偽）の保持と読み取り、公開操作（シーン操作、
+ * timeScale、ボタン・キー・バーチャルパッド、FPS の表示の有無・位置の読み書きと値の読み取り）の各モジュールへの委譲、
+ * キャンバスキャッシュへの画素の倍率の求め方と UI 部品への論理解像度の受け渡し。ゲームループの中身や描画処理は持たない。
  */
 import { Scene } from './Scene.js';
 import { GameLoop } from './GameLoop.js';
@@ -33,6 +33,8 @@ let keys = null;
 let pads = null;
 /** @type {DebugOverlay|null} 起動後の DebugOverlay。起動前は null */
 let overlay = null;
+/** @type {boolean} 開発モードで起動したか（起動設定 debug の真偽）。起動のときに決まり、その後は変わらない */
+let debugMode = false;
 
 /**
  * 正の有限数かを判定する。
@@ -84,7 +86,7 @@ function requireScenes(apiName) {
 }
 
 /**
- * 起動済みであることを確認する（バーチャルパッドの操作用）。
+ * 起動済みであることを確認する（バーチャルパッドの操作と開発モードの読み取り用）。
  * @param {string} apiName エラーメッセージに含める公開API名
  * @returns {void}
  * @throws {Error} 起動前の場合
@@ -134,7 +136,7 @@ export const Engine = {
    * @param {string[]} config.layers 奥から手前の順のレイヤー名（空でない配列）
    * @param {Scene} config.scene 最初のシーン（Scene のインスタンス）
    * @param {number} [config.tickRate=60] 1秒あたりのティック数（正の有限数）
-   * @param {boolean} [config.debug=false] true なら FPS を表示した状態で始める
+   * @param {boolean} [config.debug=false] true なら開発モードで起動する（Engine.debug が true になり、FPS を表示した状態で始まる）
    * @param {boolean} [config.virtualPad=false] true ならバーチャルパッドの仕組みを有効にする
    * @returns {void}
    * @throws {Error} 設定が正しくない場合、または2回目の呼び出しの場合
@@ -159,10 +161,12 @@ export const Engine = {
     const newPads = Boolean(config.virtualPad) ? new VirtualPads() : null;
     const newInput = new Input({ canvas: config.canvas, screen, scenes: newScenes, buttons: newButtons, keys: newKeys, pads: newPads });
     const newOverlay = new DebugOverlay(config.width, config.height);
-    newOverlay.visible = Boolean(config.debug);
+    const newDebugMode = Boolean(config.debug);
+    newOverlay.visible = newDebugMode;
     const loop = new GameLoop({ ctx, time: newTime, scenes: newScenes, layers, input: newInput, overlay: newOverlay });
 
     overlay = newOverlay;
+    debugMode = newDebugMode;
     time = newTime;
     scenes = newScenes;
     buttons = newButtons;
@@ -228,6 +232,16 @@ export const Engine = {
       throw new Error('[oz] Engine.timeScale: Engine.start の前には使えません');
     }
     time.timeScale = value;
+  },
+
+  /**
+   * 開発モードで起動したか（起動設定 debug の真偽。読み取り専用）。起動した後は変わらない。
+   * @returns {boolean}
+   * @throws {Error} 起動前の場合
+   */
+  get debug() {
+    requireStarted('Engine.debug');
+    return debugMode;
   },
 
   /**
