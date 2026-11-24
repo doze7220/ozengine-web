@@ -367,12 +367,13 @@ grep -rn "ozengine sample" index.html js assets
 
 次の箇所も、ゲームごとに変わる。立ち上げでは変えず、ゲームの Phase の REQ で変える。
 
+*   `js/names.js` の名前（レイヤー・画像・音・キー。7-4）。
 *   `js/main.js` の解像度（`width`・`height`）。
-*   `js/main.js` の `layers`（レイヤーの定義）。
+*   `js/main.js` の `layers`（レイヤーの並び。名前は `js/names.js` の `LAYER` に書く。7-4）。
 *   `js/main.js` の boot 画面の次に進む画面（`next`）。
 *   boot 画面の表示の内容（`js/scenes/BootScene.js` の文字など）。
 *   `js/main.js` の `virtualPad`（画面のスティックとボタンを使うか。7-4）。
-*   `js/ui/virtualPadConfig.js` のパッドの定義（配置、キー、画像のファイル名。7-4）。
+*   `js/ui/virtualPadConfig.js` のパッドの定義（配置、どのキーを割り当てるか、画像のファイル名、つまみの描画の大きさ。キーの値は `js/names.js` の `KEY` に書く。7-4）。
 *   メニューの項目（`js/scenes/MenuScene.js` に渡す項目。7-4）。
 *   窓の中身（`js/scenes/WindowScene.js` に渡す、窓を作る関数。7-4）。
 
@@ -387,8 +388,16 @@ grep -rn "ozengine sample" index.html js assets
 
 エラーが出る、または設定が効かないときは、そこで止めて、原因を調べる（立ち上げの Step 1 に進まない）。
 
-### 7-4. 目印を消した後に残る仕組み（boot 画面、バーチャルパッドとメニュー、窓を置くシーン）
+### 7-4. 目印を消した後に残る仕組み（名前の置き場所、boot 画面、バーチャルパッドとメニュー、窓を置くシーン、開発用パネルの雛形）
 6章で目印を消した後も、次の仕組みは `js/` に残る。ゲームの Phase の REQ で使い方を指示する（コードを書くのは Claude Code である）。
+
+**名前の置き場所（`js/names.js`）**
+*   複数の場所で使う名前を、1か所にまとめて書くファイルである。レイヤーの名前（`LAYER`）、画像の名前（`IMAGE`）、音の名前（`SOUND`）、キーの値（`KEY`）の4つに分かれている。1か所でしか使わない名前と、パス・色・大きさ・文言は書かない（使う側のファイルに書く）。
+*   6章で見本を消した後は、`LAYER` に `main`、`KEY` に `left`・`right`・`boost` が残り、`IMAGE` と `SOUND` は空である。`main` は boot 画面が、`left`・`right`・`boost` は `js/ui/virtualPadConfig.js` が使っているので、消さずに残し、ゲームの名前を足していく。
+*   ゲームの REQ で「ブーストのキーを〇〇に変える」のように、名前の値を変えるよう指示する → 値は `js/names.js` の1か所だけが直り、その名前を使うすべての場所が変わる。
+*   レイヤーを足すときは、名前を `LAYER` に書き、奥から手前への順を `js/main.js` の `layers` に書く（`layers` に無いレイヤーには何も描かれない）。
+*   画像と音を足すときは、名前を `IMAGE`・`SOUND` に書き、ファイルのパスは、素材を読み込む（ロードする）側のファイルに書く。
+*   注意: 綴りを間違えて、無い名前を書く（例 `LAYER.mian`）と、書いた所ではエラーにならず、`undefined`（値が無い）になる。描かれない、鳴らない、キーが効かない、名前を渡した先で別のエラーが出る、といった形で表れる。そうなったときは、名前の綴りを確かめるよう Claude Code に伝える。
 
 **boot 画面（`js/scenes/BootScene.js`）**
 *   最初の入力（画面に触れる、クリック、キー）を受けて、音を鳴らせる状態にするための画面である。起動すると、黒い画面に「TAP SCREEN」が出て、押す（離す）かキー（`Escape` 以外）を押すと次の画面へ進む。
@@ -402,9 +411,10 @@ grep -rn "ozengine sample" index.html js assets
 *   パッドを使わないゲームは `false` にしてよい。このときも、下の「使わないゲームでは」に挙げた5つの `.js` と画像は消さずに残してよい。
 
 **パッドの定義と描画を使う（`js/ui/virtualPadConfig.js` と `js/ui/virtualPadView.js`）**
-*   `virtualPadConfig.js` には、スティックとボタンの配置、割り当てるキー、画像のファイル名が書かれている。ゲームの REQ で「プレイのシーンでこの定義を使ってパッドを出す」と指示する → そのシーンでパッドが動き、押すとキーボードを押したときと同じ動きになる。
+*   `virtualPadConfig.js` には、スティックとボタンの配置、どのキーを割り当てるか、画像のファイル名、つまみの描画の大きさが書かれている（割り当てるキーの値は `js/names.js` の `KEY` に書かれている）。ゲームの REQ で「プレイのシーンでこの定義を使ってパッドを出す」と指示する → そのシーンでパッドが動き、押すとキーボードを押したときと同じ動きになる。
 *   `virtualPadView.js` は、画像の読み込みと描画を担う。ロード画面で画像を読み込み、プレイのシーンの描画で呼ぶ、という使い方を REQ で指示する。
-*   配置やキーを変えたいとき → REQ に「スティックを右へ寄せる」などと書く。`virtualPadConfig.js` の値が直り、見た目と位置が変わる。
+*   配置を変えたいとき → REQ に「スティックを右へ寄せる」などと書く。`virtualPadConfig.js` の値が直り、見た目と位置が変わる。
+*   キーを変えたいとき → REQ に「ブーストのキーを〇〇に変える」などと書く。`js/names.js` の `KEY` の値が直り、その名前を使うキーボードの操作とパッドの両方が変わる。割り当てるキーを増やすときは、`KEY` に名前を足し、`virtualPadConfig.js` からその名前を使う。
 
 **既定の画像を差し替える**
 *   方法A: `assets/images/vpad/` の同じファイル名（`stick_base.svg`・`stick_knob.svg`・`button_boost.svg`・`button_boost_pressed.svg`）で、自分の画像を上書きする → 再読み込みすると、スティックとボタンの見た目が変わる。
@@ -418,7 +428,7 @@ grep -rn "ozengine sample" index.html js assets
 
 **窓を置くシーン（`js/scenes/WindowScene.js`）**
 *   窓（`oz/ENGINE_API.md` 26章の UI 部品の窓）を1つ置いて、今の画面の上に積むシーンである。ゲームの REQ で「この窓を開く」と指示すると、その窓が開く。
-*   使い方は `openWindow({ layer, createWindow })` である。`layer` には窓を描くレイヤー名を、`createWindow` には窓を作って返す関数（`Ui.createWindow` で窓を作り、部品を足して返す）を渡す → シーンが積まれて窓が開く。
+*   使い方は `openWindow({ layer, createWindow })` である。`layer` には窓を描くレイヤー名を（`js/names.js` の `LAYER` の名前で渡す。例 `LAYER.main`）、`createWindow` には窓を作って返す関数（`Ui.createWindow` で窓を作り、部品を足して返す）を渡す → シーンが積まれて窓が開く。
 *   窓の `onClose` で `Engine.popScene()` する → 窓が閉じて、下の画面に戻る。閉じるための関数は別に無い。
 *   窓が開いている間は、下のシーンは止まる。
 *   背面と同じ配置のパッド（`js/ui/virtualPadConfig.js` の `VIRTUAL_PAD_LAYOUT`）を、このシーンも登録している。登録しないと、背面のパッドの位置を押した指が窓の外の押下になり、外を押すと閉じる窓が閉じてしまうためである（26章「注意」）。背面の配置が違う画面の上に置くときは、REQ でこのシーンを直すよう指示する。`virtualPad: false` のときも、そのまま使える。
