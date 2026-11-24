@@ -3,7 +3,7 @@
  */
 /* ozengine sample */
 import { Engine, Sound } from 'oz';
-import { LAYER, SOUND } from '../names.js';
+import { LAYER, SOUND, KEY } from '../names.js';
 import { VIRTUAL_PAD_LAYOUT } from '../ui/virtualPadConfig.js';
 import { drawVirtualPad } from '../ui/virtualPadView.js';
 import { FlightScene } from './FlightScene.js';
@@ -16,17 +16,17 @@ import { drawSpeedLabel } from './uiText.js';
 /** 1ティックあたりの目標の角度の変化（ラジアン）。tickRate 60 前提 */
 const TURN_PER_TICK = 0.06;
 /** 左に旋回するキー */
-const LEFT_KEY = 'ArrowLeft';
+const LEFT_KEY = KEY.left;
 /** 右に旋回するキー */
-const RIGHT_KEY = 'ArrowRight';
+const RIGHT_KEY = KEY.right;
 /** ブーストのキー */
-const BOOST_KEY = 'Space';
+const BOOST_KEY = KEY.boost;
 /** スローを切り替えるキー */
 const SLOW_KEY = 'KeyS';
 /** FPS の表示を切り替えるキー */
 const FPS_KEY = 'KeyF';
 /** メニューを開くキー */
-const MENU_KEY = 'KeyP';
+const MENU_KEY = KEY.menu;
 /** ブースト時の SE の名前 */
 const BOOST_SE = SOUND.se;
 /** 状態表示を描くレイヤー名 */

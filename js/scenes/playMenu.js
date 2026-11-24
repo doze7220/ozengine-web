@@ -3,7 +3,7 @@
  */
 /* ozengine sample */
 import { Engine } from 'oz';
-import { LAYER } from '../names.js';
+import { LAYER, KEY } from '../names.js';
 import { openMenu, closeMenu } from './MenuScene.js';
 import { resetSlow } from './slow.js';
 import { openPlayDevPanel } from './playDevPanel.js';
@@ -12,7 +12,7 @@ import { openSettings } from './settingsWindow.js';
 /** メニューを描くレイヤー名 */
 const MENU_LAYER = LAYER.ui;
 /** 「閉じる」の項目を選ぶキー */
-const CLOSE_KEY = 'KeyP';
+const CLOSE_KEY = KEY.menu;
 
 /**
  * プレイ中のメニューを開く。項目は「閉じる」「開発用パネル」「設定」「タイトルに戻る」の4つ（開発モードでないときは「開発用パネル」を除く3つ）。

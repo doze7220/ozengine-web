@@ -1,7 +1,8 @@
 /**
- * 責務: バーチャルパッドの定義（配置、キーの割り当て、画像のファイル名、つまみの描画の大きさ）。
+ * 責務: バーチャルパッドの定義（配置、キーの割り当て、画像のファイル名、つまみの描画の大きさ）。キーの値は names.js の KEY を使う。
  * 新規プロジェクトではここを書き換える。
  */
+import { KEY } from '../names.js';
 
 /**
  * パッドの配置とキーの割り当て（論理解像度 1280x720）。Engine.addVirtualPad の第2引数にそのまま渡す。
@@ -21,12 +22,12 @@ export const VIRTUAL_PAD_LAYOUT = {
     radius: 130,
     /** 反応しない中心付近の範囲。radius に対する割合（0〜1）。 */
     deadZone: 0.25,
-    /** 倒した向きに押すキー。書いた向きだけ有効（KeyboardEvent.code の値）。 */
+    /** 倒した向きに押すキー。書いた向きだけ有効（KeyboardEvent.code の値。names.js の KEY に書く）。 */
     keys: {
       /** 左へ倒したときに押すキー。 */
-      left: 'ArrowLeft',
+      left: KEY.left,
       /** 右へ倒したときに押すキー。 */
-      right: 'ArrowRight',
+      right: KEY.right,
     },
   },
   /** ボタンの並び。 */
@@ -38,8 +39,8 @@ export const VIRTUAL_PAD_LAYOUT = {
       y: 550,
       /** 反応する円の半径（論理座標の px）。 */
       radius: 100,
-      /** 押している間に押すキー（KeyboardEvent.code の値）。 */
-      key: 'Space',
+      /** 押している間に押すキー（KeyboardEvent.code の値。names.js の KEY に書く）。 */
+      key: KEY.boost,
     },
   ],
 };
