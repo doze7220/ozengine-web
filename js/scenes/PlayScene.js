@@ -1,5 +1,5 @@
 /**
- * 責務: プレイ画面のキー操作（旋回、ブースト、スロー、FPS の表示、メニュー）、バーチャルパッドとメニューを開くボタンの登録、状態表示。
+ * 責務: プレイ画面のキー操作（旋回、ブースト、メニュー、開発モードのときだけのスローと FPS の表示）、バーチャルパッドとメニューを開くボタンの登録、状態表示。
  */
 /* ozengine sample */
 import { Engine, Sound } from 'oz';
@@ -69,7 +69,7 @@ export class PlayScene extends FlightScene {
   }
 
   /**
-   * ブースト、スロー、FPS の表示の切り替え、メニューのキーを受ける。
+   * ブースト、スロー、FPS の表示の切り替え、メニューのキーを受ける。スローと FPS の表示のキーは、開発モードのときだけ受ける。
    * @param {string} code 押されたキーのコード
    * @returns {void}
    */
@@ -77,9 +77,9 @@ export class PlayScene extends FlightScene {
     super.onKeyDown(code);
     if (code === BOOST_KEY) {
       if (this.boost()) Sound.playSe(BOOST_SE);
-    } else if (code === SLOW_KEY) {
+    } else if (Engine.debug && code === SLOW_KEY) {
       toggleSlow();
-    } else if (code === FPS_KEY) {
+    } else if (Engine.debug && code === FPS_KEY) {
       cycleFps();
     } else if (code === MENU_KEY) {
       openPlayMenu(this.screen, this.backToTitle);
