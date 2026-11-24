@@ -68,7 +68,7 @@ ozengine-web/
 | `layers` | 必須。レイヤー名の配列（奥から手前の順）。利用側が定義する |
 | `tickRate` | 任意。固定ティック数（1秒あたり。既定は 60） |
 | `scene` | 必須。最初のシーン |
-| `debug` | 任意。FPS の表示の有無の起動時の値（真なら表示した状態で始まる。既定は偽）。実行中の出し入れと位置は `Engine.fpsVisible`・`Engine.fpsPosition`（`oz/ENGINE_API.md` 14章） |
+| `debug` | 任意。開発モードで起動するか（真偽は `Boolean(...)` で解釈する。既定は偽）。ゲームは `Engine.debug`（読み取り専用。起動後に変わらない）で読む（`oz/ENGINE_API.md` 3章）。真なら FPS を表示した状態で始まる。実行中の FPS の表示の出し入れと位置は `Engine.fpsVisible`・`Engine.fpsPosition`（`oz/ENGINE_API.md` 14章）で、`Engine.debug` とは互いに影響しない |
 | `virtualPad` | 任意。真ならバーチャルパッドを使う（既定は無効） |
 
 #### 2.3 シーン（`Scene` の派生クラス）
@@ -116,7 +116,7 @@ ozengine-web/
 * **キャンバスキャッシュの焼き直し:** `CanvasCache` は焼き付けを描くときに、今の画素の倍率を焼いたときの倍率と比べ、違えばその場で焼き直してから描く（`Screen` から通知は受けない。描かれていない焼き付けは次に描くときに焼き直す）。倍率は利用側に公開しない。
 * **音の時刻:** フェードと停止の予定には `AudioContext.currentTime` を使う。これは憲法3章「時間の受け渡し」に明記された例外である。音は `timeScale` と無関係に実時間で進む。
 
-`Engine` が各モジュールを生成する（`Layers` と `DebugOverlay` には、起動設定の `width`・`height` を論理解像度として渡す）。`Engine` は `DebugOverlay` を起動設定の `debug` にかかわらず常に作り、`debug` を表示の有無の起動時の値として設定する（`GameLoop` へは常にインスタンスを渡す）。`Time`・`Scenes`・`Layers`・`Input`・`DebugOverlay` のインスタンスを `GameLoop` へ、`Screen`・`Scenes`・`Buttons` のインスタンスに加え、`Keys`・`VirtualPads` を `Input` へ、`VirtualPad` を `VirtualPads` へ引数で渡すので、`GameLoop` と `Input` と `VirtualPads` はこれらを import しない。`Scenes` と `Layers` も互いを import しない。`Engine` は起動時（最初のシーンを積む前）に、画素の倍率（Canvas の画素数 ÷ 論理解像度）の求め方を関数として `CanvasCache` へ渡すので、`CanvasCache` は `Screen` を import せず、`Screen` も `CanvasCache` を知らない。同じく起動時（最初のシーンを積む前）に、論理解像度（起動設定の `width`・`height`）を `Ui` へ渡す（`setUiScreenSize`）ので、`Ui` は `Engine`・`Screen` を import しない。窓（`Ui.createWindow` の戻り値）はシーンが持ち、ポインタはシーンの `onPointer` から窓へ渡される（`Input` は `Ui` を知らず、窓は `Engine.addButton` と入力の仕組みに登録されない）。
+`Engine` が各モジュールを生成する（`Layers` と `DebugOverlay` には、起動設定の `width`・`height` を論理解像度として渡す）。`Engine` は起動設定の `debug` の真偽（開発モード）を保持し、`Engine.debug` で公開する。`DebugOverlay` は `debug` にかかわらず常に作り、その真偽を表示の有無の起動時の値として設定するだけで（`GameLoop` へは常にインスタンスを渡す）、どのモジュールにも開発モードを渡さない（起動時の FPS の表示のほかの動きは変わらない）。`Time`・`Scenes`・`Layers`・`Input`・`DebugOverlay` のインスタンスを `GameLoop` へ、`Screen`・`Scenes`・`Buttons` のインスタンスに加え、`Keys`・`VirtualPads` を `Input` へ、`VirtualPad` を `VirtualPads` へ引数で渡すので、`GameLoop` と `Input` と `VirtualPads` はこれらを import しない。`Scenes` と `Layers` も互いを import しない。`Engine` は起動時（最初のシーンを積む前）に、画素の倍率（Canvas の画素数 ÷ 論理解像度）の求め方を関数として `CanvasCache` へ渡すので、`CanvasCache` は `Screen` を import せず、`Screen` も `CanvasCache` を知らない。同じく起動時（最初のシーンを積む前）に、論理解像度（起動設定の `width`・`height`）を `Ui` へ渡す（`setUiScreenSize`）ので、`Ui` は `Engine`・`Screen` を import しない。窓（`Ui.createWindow` の戻り値）はシーンが持ち、ポインタはシーンの `onPointer` から窓へ渡される（`Input` は `Ui` を知らず、窓は `Engine.addButton` と入力の仕組みに登録されない）。
 
 依存の向きは次のとおりで、逆向きの import を禁止する。
 
@@ -139,7 +139,7 @@ UI 部品のファイル（Ui・UiWindow・UiButton・UiValue・UiCheckbox・UiS
 | モジュール | 書いてよいこと | 書いたら責務違反になること |
 | --- | --- | --- |
 | **index.js**（`oz/` 直下） | 公開APIの再export | 処理そのもの |
-| **Engine** | 起動設定の受け取りと各モジュールの初期化、公開操作（シーン操作、`timeScale`、ボタンの登録、バーチャルパッドの登録と状態の取得、キーの状態の取得、FPS の表示の有無と位置の読み書き（値の検証を含む）、FPS の値の読み取り）の各モジュールへの委譲、起動時の `CanvasCache` への画素の倍率の求め方の受け渡し、起動時の `Ui` への論理解像度の受け渡し | ゲームループの中身、描画処理、焼き付けの処理、FPS の計算、UI 部品の処理 |
+| **Engine** | 起動設定の受け取りと各モジュールの初期化、開発モード（起動設定 `debug` の真偽）の保持と読み取り、公開操作（シーン操作、`timeScale`、ボタンの登録、バーチャルパッドの登録と状態の取得、キーの状態の取得、FPS の表示の有無と位置の読み書き（値の検証を含む）、FPS の値の読み取り）の各モジュールへの委譲、起動時の `CanvasCache` への画素の倍率の求め方の受け渡し、起動時の `Ui` への論理解像度の受け渡し | ゲームループの中身、描画処理、焼き付けの処理、FPS の計算、UI 部品の処理、URL やページの参照による開発モードの判定 |
 | **GameLoop** | `requestAnimationFrame` の管理、3章の順序の呼び出し | 時間計算の詳細、ゲーム固有の処理 |
 | **Time** | `realDelta`・`gameTime`・`timeScale` の管理、固定ティックの蓄積 | 入力、描画 |
 | **Screen** | 論理解像度の保持、スクリーン座標と論理座標の変換、Canvas の表示サイズの調整（縦横比を保ってウィンドウに合わせる）、Canvas の画素数の調整（表示サイズ × `devicePixelRatio`、上限 2） | 描画、入力の配信、`ctx` の操作 |
@@ -172,7 +172,7 @@ UI 部品のファイル（Ui・UiWindow・UiButton・UiValue・UiCheckbox・UiS
 | **Sound** | AudioContext の管理（最初の入力と、ブラウザが止めたあとの入力での再開を含む）、音声のデコードと名前での保持、SEとBGMの再生、フェード、音量 | BGMの状態遷移（ピンチなどの判定はゲーム側）、ファイルの読み込み |
 | **Storage** | 単一JSONの保存と読み込み、版番号が違うときの既定値への初期化、`localStorage` が使えないときのメモリ上での継続 | セーブ内容の定義、移行処理 |
 | **DebugOverlay** | FPSの計算（表示の有無にかかわらず毎フレーム）と値の保持、表示の有無と位置（画面の四隅）の保持、表示（表示の `save` / `restore` の中での論理座標への拡大の設定を含む）、位置の値の一覧（`FPS_POSITIONS`）の定義 | ゲーム状態の参照、公開APIの引数の検証（`Engine` が行う） |
-| **js/main.js** | `Engine.start` に渡す設定（解像度、レイヤー、最初のシーン（boot 画面と、その次に進む画面の指定）、`debug`、`virtualPad` など）の用意と `Engine.start` の呼び出し | ゲームロジック、描画処理 |
+| **js/main.js** | `Engine.start` に渡す設定（解像度、レイヤー、最初のシーン（boot 画面と、その次に進む画面の指定）、`debug`（開発モード。URL の `?debug` から決める。目印の外に置く）、`virtualPad` など）の用意と `Engine.start` の呼び出し | ゲームロジック、描画処理 |
 | **js/scenes/** | シーンごとの進行と、`effect/`・`entities/` の呼び出し、`ui` レイヤーの画面構成（文字、画像、ボタン、暗幕）、スプライトの配置（位置と回転の設定と `draw` の呼び出し）、スプライトの焼き付け（`CanvasCache` での作成をシーンの `init`、手放しを `destroy` で行う）。タイトルとプレイの共通処理（`FlightScene`。機体の焼き付けの作成と手放しを含む）、音の設定（ミュート・BGM の音量・効果音の音量）の保存と `Sound` への反映（`soundSettings.js`。土台で `Storage` を扱うのはここだけ）、文字の共通処理（`uiText.js`）、メニューの仕組み（`MenuScene`）、窓を置くシーンの仕組み（`WindowScene`。窓を作る関数を呼ぶ側から受け取り、背面と同じ配置のバーチャルパッドを登録する。ファイル全体の目印なし）、土台のメニューの項目（`playMenu.js`）、スローの切り替えと入り切りの指定（`slow.js`）、FPS の表示の切り替えと、表示の位置の選択肢・今の状態を表す文字（`fps.js`）、開発用パネル（`devPanel.js`。標準の見た目の窓）、設定画面（`settingsWindow.js`。見た目を差し替えた窓。保存は `soundSettings.js` を呼ぶ）、設定画面の見た目（`settingsLook.js`。7種類の描く関数）、boot 画面（`BootScene`。最初の入力を受け、次の画面へ進む。ファイル全体の目印はなく、押した瞬間の SE だけ目印付き。`MenuScene`・`WindowScene` もファイル全体の目印なし）もここに置く | 細かい動きや描画の実装（機体の動き、星・トレイル・風の描画）、窓の中身のファイル（`devPanel.js`・`settingsWindow.js`）での `Storage` の直接の扱い（保存は `soundSettings.js` の関数を呼ぶ）、目印の付いていないファイル（`BootScene`・`MenuScene`・`WindowScene`）からの目印の付いたコードの import、メニューの項目の定義（`playMenu.js`）への窓の中身の記述 |
 | **js/ui/** | バーチャルパッドの定義（配置、キーの割り当て、画像のファイル名）、画像の読み込みと描画 | ゲーム進行、目印の付いたコードの import |
 | **js/effect/** | 星、トレイルなどの演出の更新と描画 | ゲーム進行に影響する処理 |
