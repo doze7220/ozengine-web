@@ -154,3 +154,8 @@
 **持ち越し**
 * `COWORK_STATUS.md` 3章の既存の項は、すべて残した。`requireStarted` の重複の項に、06-01 で対象外としたことを書き足した。
 * DIR 2章で送り先が未定のもの（新しいデバッグ機能、開発用のコードを公開時に取り除く仕組み、エンジンの中の値の置き場所、見た目だけの値と偶然同じ値、資料に書き写した値とテスト）を、`_doc/PROJECT_MILESTONE.md` の「様子を見て判断する項目」に足した。
+
+#### Phase 06 → 07 の棚卸し（2026-11-24）
+* **ログの移動:** Phase 06 の DIR・REQ・RES と、その前に行った Interrupt（261122_2134）・Survey（261123_1312）の REQ・RES を `_log/dir/closed/`・`_log/req/closed/`・`_log/res/closed/` へ移した。移動後のパスに直したのは `COWORK_STATUS.md` の中だけ（`_doc/PROJECT_PHASE_TRANSITION_CLEANUP.md` 4章）。
+* **`PROJECT_ARCHITECTURE.md`:** Phase 06 で変わった記載（1章のフォルダ構造と手順書の説明、2.2 の `debug`、3章の `Engine` と `DebugOverlay`、4章の `Engine`・`js/main.js`・`js/names.js`・`js/scenes/`・`js/ui/` の行）を実コードのファイルの並び・import・`Engine.debug` と名前の値の使われ方と照らして監査した。相違、比喩、他の資料との重複は無く、削る所は無かった。
+* **`COWORK_STATUS.md`:** Phase 06 の現況とクローズの記録を要約して残し、解決・破棄した項目は本ファイルへ移した（上の「Phase 06 クローズ」）。
