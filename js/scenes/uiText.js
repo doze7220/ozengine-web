@@ -18,8 +18,6 @@ const LABEL_FONT = '24px sans-serif';
 const LABEL_ALIGN = 'right';
 /** ミュート中の表示文字 */
 const MUTE_TEXT = 'ミュート中';
-/** スロー中の表示文字 */
-const SLOW_TEXT = 'スロー';
 
 /**
  * @typedef {{ width: number, height: number }} Screen 解像度
@@ -75,11 +73,12 @@ export function drawMuteLabel(ctx, screen) {
 }
 
 /**
- * 右上の2行目に「スロー」を描く。
+ * 右上の2行目に、渡された速度の文字を描く。
  * @param {CanvasRenderingContext2D} ctx 描画先
  * @param {Screen} screen 解像度
+ * @param {string} text 速度の文字
  * @returns {void}
  */
-export function drawSlowLabel(ctx, screen) {
-  drawLabel(ctx, screen, SLOW_TEXT, 1);
+export function drawSpeedLabel(ctx, screen, text) {
+  drawLabel(ctx, screen, text, 1);
 }

@@ -8,9 +8,9 @@ import { drawVirtualPad } from '../ui/virtualPadView.js';
 import { FlightScene } from './FlightScene.js';
 import { drawMenuButton } from './MenuScene.js';
 import { openPlayMenu } from './playMenu.js';
-import { isSlow, toggleSlow } from './slow.js';
+import { isNormalSpeed, speedText, toggleSlow } from './slow.js';
 import { cycleFps } from './fps.js';
-import { drawSlowLabel } from './uiText.js';
+import { drawSpeedLabel } from './uiText.js';
 
 /** 1ティックあたりの目標の角度の変化（ラジアン）。tickRate 60 前提 */
 const TURN_PER_TICK = 0.06;
@@ -87,7 +87,7 @@ export class PlayScene extends FlightScene {
   }
 
   /**
-   * 共通の描画のあと、ui レイヤーに状態表示（スロー）、メニューを開くボタン、バーチャルパッドを描く。
+   * 共通の描画のあと、ui レイヤーに状態表示（等速でないときの速度）、メニューを開くボタン、バーチャルパッドを描く。
    * @param {CanvasRenderingContext2D} ctx 描画先
    * @param {string} layer レイヤー名
    * @param {{ realDelta: number, gameTime: number, timeScale: number }} time エンジンの時間（読み取り専用。変更しない）
@@ -96,7 +96,7 @@ export class PlayScene extends FlightScene {
   draw(ctx, layer, time) {
     super.draw(ctx, layer, time);
     if (layer !== UI_LAYER) return;
-    if (isSlow()) drawSlowLabel(ctx, this.screen);
+    if (!isNormalSpeed()) drawSpeedLabel(ctx, this.screen, speedText());
     drawMenuButton(ctx, MENU_BUTTON, MENU_BUTTON_TEXT);
     drawVirtualPad(ctx, this);
   }
