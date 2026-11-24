@@ -201,6 +201,6 @@ function createDevPanelWindow(screen) {
  * @param {{ width: number, height: number }} screen 画面の大きさ（論理解像度。「画面の大きさ」の表示に使う）
  * @returns {void}
  */
-export function openDevPanel(screen) {
+export function openPlayDevPanel(screen) {
   openWindow({ layer: PANEL_LAYER, createWindow: () => createDevPanelWindow(screen) });
 }

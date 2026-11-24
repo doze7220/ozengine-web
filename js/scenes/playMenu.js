@@ -4,7 +4,7 @@
 /* ozengine sample */
 import { openMenu, closeMenu } from './MenuScene.js';
 import { resetSlow } from './slow.js';
-import { openDevPanel } from './devPanel.js';
+import { openPlayDevPanel } from './playDevPanel.js';
 import { openSettings } from './settingsWindow.js';
 
 /** メニューを描くレイヤー名 */
@@ -29,7 +29,7 @@ export function openPlayMenu(screen, backToTitle) {
         label: '開発用パネル',
         onSelect: () => {
           closeMenu();
-          openDevPanel(screen);
+          openPlayDevPanel(screen);
         },
       },
       {
