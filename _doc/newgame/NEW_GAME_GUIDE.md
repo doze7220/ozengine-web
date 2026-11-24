@@ -113,7 +113,11 @@ OZ Engine のリポジトリ（GitHub `doze7220/ozengine-web`、ローカル `D:
 │   └── src/
 ├── js/
 │   ├── main.js
-│   └── （見本のコードのフォルダとファイル）
+│   ├── names.js
+│   ├── effect/
+│   ├── entities/
+│   ├── scenes/
+│   └── ui/
 ├── assets/
 │   ├── images/
 │   ├── sounds/
@@ -267,7 +271,7 @@ OZ Engine のリポジトリ（GitHub `doze7220/ozengine-web`、ローカル `D:
 
 ## 6. 目印の付いたコードと見本の素材を消す
 
-担当は Claude Code である（手順の順6）。土台の `js/` と `assets/` には、新規プロジェクトで消す前提の見本のコードと素材が入っている。これを消して、エンジンだけが動く最小の状態にする。
+担当は Claude Code である（手順の順6）。土台の `js/` と `assets/` には、新規プロジェクトで消す前提の見本のコードと素材が入っている。これを消して、見本の無い最小の状態（boot 画面のあと、空のシーンに進むだけ）にする。
 
 ### 6-1. 目印の書き方
 消す前提のコードには、次の目印が付いている。
@@ -302,7 +306,7 @@ grep -rlZF '/* ozengine sample */' js assets | xargs -0 -r rm --
 grep -rlZF 'ozengine sample: begin' js assets | xargs -0 -r sed -i '/ozengine sample: begin/,/ozengine sample: end/d'
 ```
 
-期待する結果: 何も表示されない。範囲の目印のあるファイル（現在の土台では `js/main.js` と `js/scenes/BootScene.js`）から、目印で囲んだ範囲が消える。
+期待する結果: 何も表示されない。範囲の目印のあるファイル（現在の土台では `js/main.js`・`js/names.js`・`js/scenes/BootScene.js` の3つ）から、目印で囲んだ範囲が消える。
 
 **4. 確認:** 目印が残っていないことを確かめる。
 
@@ -315,8 +319,8 @@ grep -rn "ozengine sample" index.html js assets
 補足:
 *   手順2・3の `-r`（`xargs` の入力が空なら実行しない）は、目印がすでに無いときに、`rm`・`sed` が空の引数でエラーにならないようにするためである。
 *   手順2の `/* ozengine sample */` は固定の文字列で、範囲の目印（`/* ozengine sample: begin */`）には一致しない。
-*   空になったフォルダ（`js/scenes/` など）は残してよい。git は空のフォルダを記録しない。
-*   現在の土台では、手順を終えると `js/` には次の6ファイルが残る。期待する結果: `js/main.js`、`js/scenes/BootScene.js`、`js/scenes/MenuScene.js`、`js/scenes/WindowScene.js`、`js/ui/virtualPadConfig.js`、`js/ui/virtualPadView.js`（`find js -type f` で6つだけ出る）。これらは boot 画面（最初の入力を受ける画面）、バーチャルパッド（画面のスティックとボタン）、メニューの仕組み、窓を置くシーンで、目印が付いていない（`BootScene.js` の押した瞬間の SE の部分は目印が付いていたので消える）。`js/main.js` の `import` は `'oz'` と `./scenes/BootScene.js` だけになり、残りの4つ（`MenuScene.js`・`WindowScene.js`・`virtualPadConfig.js`・`virtualPadView.js`）は `main.js` から読み込まれないので、起動には影響しない（`WindowScene.js` は `virtualPadConfig.js` を読み込むが、`WindowScene.js` 自体がどこからも読み込まれない）。7章の7-4 に使い方を書いてある。
+*   空になったフォルダ（`js/effect/`・`js/entities/`）は残してよい。git は空のフォルダを記録しない。
+*   現在の土台では、手順を終えると `js/` には次の8ファイルが残る。期待する結果: `js/main.js`、`js/names.js`、`js/scenes/BootScene.js`、`js/scenes/MenuScene.js`、`js/scenes/WindowScene.js`、`js/scenes/devPanel.js`、`js/ui/virtualPadConfig.js`、`js/ui/virtualPadView.js`（`find js -type f` で8つだけ出る）。これらは起動（`main.js`）、名前の置き場所（`names.js`）、boot 画面（最初の入力を受ける画面）、バーチャルパッド（画面のスティックとボタン）、メニューの仕組み、窓を置くシーン、開発用パネルの雛形で、ファイル全体の目印が付いていない（`main.js` の見本の画面、`names.js` の見本の名前、`BootScene.js` の押した瞬間の SE の部分は、範囲の目印が付いていたので消える。`names.js` には `LAYER` の `main` と、`KEY` の `left`・`right`・`boost` が残り、`IMAGE`・`SOUND` は空になる）。`js/main.js` の `import` は `'oz'`・`./names.js`・`./scenes/BootScene.js` だけになり、起動に使われるのは `main.js`・`names.js`・`BootScene.js` の3つである。`names.js` は `main.js` が読み込むので、消すと起動しない。残りの5つ（`MenuScene.js`・`WindowScene.js`・`devPanel.js`・`virtualPadConfig.js`・`virtualPadView.js`）は、ゲームが使うまで読み込まれないので、起動には影響しない（`devPanel.js` は `WindowScene.js` を、`WindowScene.js` と `virtualPadView.js` は `virtualPadConfig.js` を、`virtualPadConfig.js` は `names.js` を読み込むが、`MenuScene.js`・`devPanel.js`・`virtualPadView.js` がどこからも読み込まれない）。7章の7-4 に使い方を書いてある。
 
 ### 6-3. 見本の素材を消す（Claude Code が行う）
 目印を消すと、見本のコードが使っていた素材（画像、音、スプライト）が参照されなくなる。参照されていない素材を、次の順に消す。
@@ -395,7 +399,7 @@ grep -rn "ozengine sample" index.html js assets
 **バーチャルパッドの ON / OFF（`js/main.js`）**
 *   `virtualPad: true`（既定）のまま、スマートフォンなど指で触れる端末で開く → 画面を指で触れたあとに、パッドが定義されたシーンでスティックとボタンが出る。パッドが定義されていないシーン（空のシーンなど）では何も出ない。マウスとキーボードだけの PC では出ない。
 *   `virtualPad: true` を `false` に変える → スマートフォンで触れても、スティックとボタンが出ない。既定の画像も読み込まれない。PC の操作は変わらない。
-*   パッドを使わないゲームは `false` にしてよい。このときも、下の「使わないゲームでは」に挙げた `.js` と画像は消さずに残してよい。
+*   パッドを使わないゲームは `false` にしてよい。このときも、下の「使わないゲームでは」に挙げた5つの `.js` と画像は消さずに残してよい。
 
 **パッドの定義と描画を使う（`js/ui/virtualPadConfig.js` と `js/ui/virtualPadView.js`）**
 *   `virtualPadConfig.js` には、スティックとボタンの配置、割り当てるキー、画像のファイル名が書かれている。ゲームの REQ で「プレイのシーンでこの定義を使ってパッドを出す」と指示する → そのシーンでパッドが動き、押すとキーボードを押したときと同じ動きになる。
@@ -409,7 +413,7 @@ grep -rn "ozengine sample" index.html js assets
 
 **メニューの仕組み（`js/scenes/MenuScene.js`）**
 *   プレイ中に開く、項目が縦に並んだメニューの仕組みである。ゲームの REQ で「このゲームのメニューの項目は〇〇」と指示すると、その項目が並ぶ。
-*   土台のメニューの項目（閉じる・開発用パネル・設定・タイトルに戻る）は見本なので、6章で消える。ゲームでは自分の項目を渡して使う。
+*   土台のメニューの項目（閉じる・開発用パネル・設定・タイトルに戻る。「開発用パネル」は開発モードのときだけ出る）は見本なので、6章で消える。ゲームでは自分の項目を渡して使う。
 *   メニューが開いている間は、下のシーンは止まる。項目の外を押しても何も起きない。
 
 **窓を置くシーン（`js/scenes/WindowScene.js`）**
@@ -418,11 +422,12 @@ grep -rn "ozengine sample" index.html js assets
 *   窓の `onClose` で `Engine.popScene()` する → 窓が閉じて、下の画面に戻る。閉じるための関数は別に無い。
 *   窓が開いている間は、下のシーンは止まる。
 *   背面と同じ配置のパッド（`js/ui/virtualPadConfig.js` の `VIRTUAL_PAD_LAYOUT`）を、このシーンも登録している。登録しないと、背面のパッドの位置を押した指が窓の外の押下になり、外を押すと閉じる窓が閉じてしまうためである（26章「注意」）。背面の配置が違う画面の上に置くときは、REQ でこのシーンを直すよう指示する。`virtualPad: false` のときも、そのまま使える。
-*   土台の開発用パネルと設定画面は見本なので、6章で消える。ゲームでは自分の窓を作る関数を渡して使う。
+*   土台の設定画面と、土台が開発用パネルに足した項目は見本なので、6章で消える。開発用パネルの雛形（`js/scenes/devPanel.js`）は残る。ゲームでは自分の窓を作る関数を渡して使う。
 *   UI 部品の既定の大きさは、横長のゲームを縦に持ったスマートフォンでは小さい。26章「既定の大きさ」を見る。
 
 **使わないゲームでは**
-*   `virtualPad` を `false` にし、メニューも窓も使わないなら、4つの `.js`（`MenuScene.js`・`WindowScene.js`・`virtualPadConfig.js`・`virtualPadView.js`）と画像はそのまま残してよい。どこからも読み込まれないので、起動に影響しない。
+*   `virtualPad` を `false` にし、メニューも窓も開発用パネルも使わないなら、5つの `.js`（`MenuScene.js`・`WindowScene.js`・`devPanel.js`・`virtualPadConfig.js`・`virtualPadView.js`）と画像はそのまま残してよい。ゲームのコードから読み込まれないので、起動に影響しない。
+*   `js/names.js` は `js/main.js` が読み込むので、この5つに入らない。消すと起動しない。
 
 ## 8. 憲法と開発資料にエンジンについて書く
 
