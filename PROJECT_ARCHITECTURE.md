@@ -32,7 +32,7 @@ ozengine-web/
 │   └── sounds/
 ├── test/                   # 自動テスト（`node --test` でのみ実行。`oz/` の外に置き、新規プロジェクトにはコピーしない）
 ├── _doc/
-│   └── newgame/            # 新規プロジェクトの手順書・ゲーム用のルールの文面・Claude Code の設定例（ゲームのプロジェクトを作るときだけ使い、コピーしない）
+│   └── newgame/            # 新規プロジェクトの手順書・ゲーム用のルールの文面・Claude Code の設定例（ゲームのプロジェクトを作るとき・更新するときに使い、コピーしない）
 ├── _log/
 ├── CLAUDE.md
 ├── PROJECT_ARCHITECTURE.md
@@ -40,7 +40,7 @@ ozengine-web/
 └── README.md
 ```
 
-新規プロジェクト（ゲームのプロジェクト）の作り方、エンジンの更新方法、`oz/` の改変の確かめ方、エンジンの不足の伝え方は、`_doc/newgame/NEW_GAME_GUIDE.md` に書く。ゲームの憲法に貼り付けるルールの文面は `_doc/newgame/GAME_RULES.md`、ゲームのプロジェクトの Claude Code の設定例は `_doc/newgame/settings.example.json` にある。
+新規プロジェクト（ゲームのプロジェクト）の作り方、エンジンの更新方法、すでに作ったゲームへの土台の仕組み（開発用パネルの雛形と名前の置き場所）の取り込み方、`oz/` の改変の確かめ方、エンジンの不足の伝え方は、`_doc/newgame/NEW_GAME_GUIDE.md` に書く。ゲームの憲法に貼り付けるルールの文面は `_doc/newgame/GAME_RULES.md`、ゲームのプロジェクトの Claude Code の設定例は `_doc/newgame/settings.example.json` にある。
 
 エンジンと素材の import には、`index.html` で定義する import map を使う。
 
@@ -176,7 +176,7 @@ UI 部品のファイル（Ui・UiWindow・UiButton・UiValue・UiCheckbox・UiS
 | **js/main.js** | `Engine.start` に渡す設定（解像度、レイヤーの並び（奥から手前の順。名前は `js/names.js` の `LAYER`）、最初のシーン（boot 画面と、その次に進む画面の指定）、`debug`（開発モード。URL の `?debug` から決める。目印の外に置く）、`virtualPad` など）の用意と `Engine.start` の呼び出し | ゲームロジック、描画処理、レイヤー名の値の直書き |
 | **js/names.js** | 複数のファイルまたは行で使う名前の値（レイヤー `LAYER`、画像 `IMAGE`、音 `SOUND`、キー `KEY`）。見本だけが使う名前は範囲の目印で囲む。ファイル全体の目印なし | 関数・処理・import、1か所でしか使わない名前、パス・色・大きさ・文言・レイヤーの順 |
 | **js/scenes/** | シーンごとの進行と、`effect/`・`entities/` の呼び出し、`ui` レイヤーの画面構成（文字、画像、ボタン、暗幕）、スプライトの配置（位置と回転の設定と `draw` の呼び出し）、スプライトの焼き付け（`CanvasCache` での作成をシーンの `init`、手放しを `destroy` で行う）。タイトルとプレイの共通処理（`FlightScene`。機体の焼き付けの作成と手放しを含む）、音の設定（ミュート・BGM の音量・効果音の音量）の保存と `Sound` への反映（`soundSettings.js`。土台で `Storage` を扱うのはここだけ）、文字の共通処理（`uiText.js`。右上の状態表示を含む。速度の文字は呼ぶ側から受け取る）、メニューの仕組み（`MenuScene`）、窓を置くシーンの仕組み（`WindowScene`。窓を作る関数を呼ぶ側から受け取り、背面と同じ配置のバーチャルパッドを登録する。ファイル全体の目印なし）、土台のメニューの項目（`playMenu.js`。項目「開発用パネル」は開発モード（`Engine.debug`）のときだけ。`PlayScene` のスローと FPS の表示のキーも同じ）、速度の切り替え（等速とスローの切り替え、等速に戻すこと）と、今の速度を表す文字（`slow.js`）、FPS の表示の切り替えと、今の状態を表す文字（`fps.js`。位置の選択肢と文字は `devPanel.js` のものを使う）、開発用パネルの雛形（`devPanel.js`。標準の見た目の窓。「基本」の部品（FPS と速度）、呼ぶ側の部品とタブの受け入れ、開き方。開発モードでなければ開かない。FPS の位置の選択肢・FPS の値と速度の文字も持ち、土台が読む。ファイル全体の目印なし）、土台の開発用パネルの項目（`playDevPanel.js`。雛形に足す部品とタブ「情報」）、設定画面（`settingsWindow.js`。見た目を差し替えた窓。保存は `soundSettings.js` を呼ぶ）、設定画面の見た目（`settingsLook.js`。7種類の描く関数）、boot 画面（`BootScene`。最初の入力を受け、次の画面へ進む。ファイル全体の目印はなく、押した瞬間の SE だけ目印付き。`MenuScene`・`WindowScene`・`devPanel.js` もファイル全体の目印なし）もここに置く | 細かい動きや描画の実装（機体の動き、星・トレイル・風の描画）、窓の中身のファイル（`devPanel.js`・`playDevPanel.js`・`settingsWindow.js`）での `Storage` の直接の扱い（保存は `soundSettings.js` の関数を呼ぶ）、目印の付いていないファイル（`BootScene`・`MenuScene`・`WindowScene`・`devPanel.js`）からの目印の付いたコードの import（`js/names.js` の範囲の目印の中の名前の参照を含む）、メニューの項目の定義（`playMenu.js`）への窓の中身の記述、開発用パネルの雛形（`devPanel.js`）へのゲーム固有の値（機体・音・レイヤー名など）と保存の記述、URL による開発モードの判定（`js/main.js` が行う）、`js/names.js` にある名前の値の直書き、レイヤー名を呼ぶ側から受け取るファイル（`BootScene`・`MenuScene`・`WindowScene`・`devPanel.js`）での `LAYER` の参照 |
-| **js/ui/** | バーチャルパッドの定義（配置、キーの割り当て（値は `js/names.js` の `KEY`）、画像のファイル名）、画像の読み込みと描画 | ゲーム進行、目印の付いたコードの import（`js/names.js` の範囲の目印の中の名前の参照を含む）、キーの値の直書き |
+| **js/ui/** | バーチャルパッドの定義（配置、キーの割り当て（値は `js/names.js` の `KEY`）、画像のファイル名、つまみの描画の大きさ（`knobRadius`））、画像の読み込みと描画 | ゲーム進行、目印の付いたコードの import（`js/names.js` の範囲の目印の中の名前の参照を含む）、キーの値の直書き |
 | **js/effect/** | 星、トレイルなどの演出の更新と描画 | ゲーム進行に影響する処理 |
 | **js/entities/** | 位置や状態の保持、動きの更新、自動操縦 | 描画命令の直書き（描画はスプライトや `effect/` に任せる） |
 | **assets/sprites/*.js** | 見た目の描画（`oz/ENGINE_API.md` 23章の約束）。`ship.js` は OZ Vector Editor の書き出しファイルで、手で編集しない | 位置や動き、外部への依存（組み立て用のJSがパーツのスプライトJSを `import` することを除く） |
