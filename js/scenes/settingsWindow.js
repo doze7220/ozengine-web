@@ -3,12 +3,13 @@
  */
 /* ozengine sample */
 import { Engine, Sound, Ui } from 'oz';
+import { LAYER } from '../names.js';
 import { openWindow } from './WindowScene.js';
 import { SETTINGS_LOOK } from './settingsLook.js';
 import { isMuted, setMuted, setBgmVolume, setSeVolume, resetSoundSettings } from './soundSettings.js';
 
 /** 窓を描くレイヤー名 */
-const SETTINGS_LAYER = 'ui';
+const SETTINGS_LAYER = LAYER.ui;
 /** 窓のタイトル */
 const SETTINGS_TITLE = '設定';
 /** 窓の幅 */

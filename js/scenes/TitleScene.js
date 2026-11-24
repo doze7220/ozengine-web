@@ -3,6 +3,7 @@
  */
 /* ozengine sample */
 import { Assets, Engine, Sound } from 'oz';
+import { LAYER } from '../names.js';
 import { steerByAutopilot } from '../entities/autopilot.js';
 import { FlightScene } from './FlightScene.js';
 import { PlayScene } from './PlayScene.js';
@@ -15,7 +16,7 @@ const BGM_NAME = 'bgm';
 /** 画像の素材名 */
 const IMAGE_NAME = 'sample';
 /** 文字を描くレイヤー名 */
-const UI_LAYER = 'ui';
+const UI_LAYER = LAYER.ui;
 
 /** ゲーム名の表示文字 */
 const TITLE_TEXT = 'Vernier Trail';

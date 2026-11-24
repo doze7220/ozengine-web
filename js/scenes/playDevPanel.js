@@ -4,13 +4,14 @@
  */
 /* ozengine sample */
 import { Engine, Sound } from 'oz';
+import { LAYER } from '../names.js';
 import { openDevPanel, fpsText } from './devPanel.js';
 import { resetSlow } from './slow.js';
 import { isMuted } from './soundSettings.js';
 import { fpsStatusText } from './fps.js';
 
 /** 窓を描くレイヤー名 */
-const PANEL_LAYER = 'ui';
+const PANEL_LAYER = LAYER.ui;
 
 /** 行の間隔（部品の高さ 88 と間 12） */
 const ROW_STEP = 100;

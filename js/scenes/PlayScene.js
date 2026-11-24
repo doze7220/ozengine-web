@@ -3,6 +3,7 @@
  */
 /* ozengine sample */
 import { Engine, Sound } from 'oz';
+import { LAYER } from '../names.js';
 import { VIRTUAL_PAD_LAYOUT } from '../ui/virtualPadConfig.js';
 import { drawVirtualPad } from '../ui/virtualPadView.js';
 import { FlightScene } from './FlightScene.js';
@@ -29,7 +30,7 @@ const MENU_KEY = 'KeyP';
 /** ブースト時の SE の名前 */
 const BOOST_SE = 'se';
 /** 状態表示を描くレイヤー名 */
-const UI_LAYER = 'ui';
+const UI_LAYER = LAYER.ui;
 /** メニューを開く画面のボタンの矩形（論理座標。上の中央） */
 const MENU_BUTTON = { x: 560, y: 20, width: 160, height: 60 };
 /** メニューを開く画面のボタンの表示文字 */

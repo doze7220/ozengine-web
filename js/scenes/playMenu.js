@@ -3,13 +3,14 @@
  */
 /* ozengine sample */
 import { Engine } from 'oz';
+import { LAYER } from '../names.js';
 import { openMenu, closeMenu } from './MenuScene.js';
 import { resetSlow } from './slow.js';
 import { openPlayDevPanel } from './playDevPanel.js';
 import { openSettings } from './settingsWindow.js';
 
 /** メニューを描くレイヤー名 */
-const MENU_LAYER = 'ui';
+const MENU_LAYER = LAYER.ui;
 /** 「閉じる」の項目を選ぶキー */
 const CLOSE_KEY = 'KeyP';
 

@@ -3,6 +3,7 @@
  */
 /* ozengine sample */
 import { Assets, Engine, Scene } from 'oz';
+import { LAYER } from '../names.js';
 import { loadVirtualPadImages } from '../ui/virtualPadView.js';
 import { openSoundSettings } from './soundSettings.js';
 import { drawMuteLabel, drawText } from './uiText.js';
@@ -24,7 +25,7 @@ const LOADING_TEXT = 'ロード中';
 /** 「ロード中」のフォント */
 const LOADING_FONT = '32px sans-serif';
 /** 文字を描くレイヤー名 */
-const UI_LAYER = 'ui';
+const UI_LAYER = LAYER.ui;
 
 /** 最初のシーン。素材をロードして、渡された次の画面へ切り替える */
 export class LoadScene extends Scene {

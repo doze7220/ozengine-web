@@ -1,7 +1,8 @@
 /**
- * 責務: Engine.start の呼び出しと、開発モードの指定（URL の ?debug）、レイヤーと最初の画面の流れ（boot 画面と次の画面）の定義を行う利用側のエントリポイント。
+ * 責務: Engine.start の呼び出しと、開発モードの指定（URL の ?debug）、レイヤーの並び（名前は names.js）と最初の画面の流れ（boot 画面と次の画面）の定義を行う利用側のエントリポイント。
  */
 import { Engine, Scene } from 'oz';
+import { LAYER } from './names.js';
 import { BootScene } from './scenes/BootScene.js';
 
 /** 解像度 */
@@ -26,8 +27,8 @@ const config = {
   canvas: document.querySelector('canvas'),
   width: screen.width,
   height: screen.height,
-  layers: ['main'],
-  scene: new BootScene({ screen, layer: 'main', next: () => new Scene() }),
+  layers: [LAYER.main],
+  scene: new BootScene({ screen, layer: LAYER.main, next: () => new Scene() }),
   debug,
   virtualPad: true,
 };
@@ -36,8 +37,8 @@ const config = {
 import { LoadScene } from './scenes/LoadScene.js';
 import { TitleScene } from './scenes/TitleScene.js';
 
-config.layers = ['stars', 'trail', 'ship', 'wind', 'ui'];
-config.scene = new LoadScene(screen, () => new BootScene({ screen, layer: 'ui', next: () => new TitleScene(screen) }));
+config.layers = [LAYER.stars, LAYER.trail, LAYER.ship, LAYER.wind, LAYER.ui];
+config.scene = new LoadScene(screen, () => new BootScene({ screen, layer: LAYER.ui, next: () => new TitleScene(screen) }));
 /* ozengine sample: end */
 
 Engine.start(config);

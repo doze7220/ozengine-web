@@ -4,6 +4,7 @@
 /* ozengine sample */
 import { CanvasCache, Scene } from 'oz';
 import shipSprite from 'assets/sprites/ship.js';
+import { LAYER } from '../names.js';
 import { Ship } from '../entities/Ship.js';
 import { Stars } from '../effect/Stars.js';
 import { Trail } from '../effect/Trail.js';
@@ -120,19 +121,19 @@ export class FlightScene extends Scene {
    */
   draw(ctx, layer, time) {
     switch (layer) {
-      case 'stars':
+      case LAYER.stars:
         this.stars.draw(ctx, this.camera());
         break;
-      case 'trail':
+      case LAYER.trail:
         this.trail.draw(ctx, this.camera());
         break;
-      case 'ship':
+      case LAYER.ship:
         this.drawShip(ctx, this.camera());
         break;
-      case 'wind':
+      case LAYER.wind:
         this.wind.draw(ctx, this.camera());
         break;
-      case 'ui':
+      case LAYER.ui:
         drawMuteLabel(ctx, this.screen);
         break;
     }
