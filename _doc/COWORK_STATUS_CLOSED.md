@@ -132,3 +132,6 @@
 * **ログの移動:** Phase 05 の DIR・REQ・RES と、Phase 05 の間に行った Interrupt（261120_1545）の REQ・RES を `_log/dir/closed/`・`_log/req/closed/`・`_log/res/closed/` へ移した。移動後のパスに直したのは `COWORK_STATUS.md` の中だけ（`_doc/PROJECT_PHASE_TRANSITION_CLEANUP.md` 4章）。
 * **`PROJECT_ARCHITECTURE.md`:** Phase 05 で足した記載（3章の UI 部品のファイルの並びと中の向き、4章の `Ui`〜`UiStandardLook`・`DebugOverlay`・`js/scenes/` の行、自動テストの規則の対象）を実コードと照らして監査した。ファイルの並び・import の向き・`js/scenes/` のファイルは実コードと一致し、コードを追う記述・比喩・重複は無く、削る所は無かった。
 * **`COWORK_STATUS.md`:** Phase 05 の現況とクローズの記録を要約して残し、解決・破棄した項目は本ファイルへ移した（上の「Phase 05 クローズ」）。
+
+#### Phase 06 の間に解決した項目（2026-11-24）
+* **`PROJECT_ARCHITECTURE.md` 4章の `js/ui/` の責務に「つまみの描画の大きさ」が無い件:** Phase 06-04 で、4章の `js/ui/` に `knobRadius` を書き足した（RES: `./_log/res/261124_2032_RES_Phase06-04_手順書と資料の仕上げ.md` タスク8）。
