@@ -376,6 +376,7 @@ grep -rn "ozengine sample" index.html js assets
 *   `js/ui/virtualPadConfig.js` のパッドの定義（配置、どのキーを割り当てるか、画像のファイル名、つまみの描画の大きさ。キーの値は `js/names.js` の `KEY` に書く。7-4）。
 *   メニューの項目（`js/scenes/MenuScene.js` に渡す項目。7-4）。
 *   窓の中身（`js/scenes/WindowScene.js` に渡す、窓を作る関数。7-4）。
+*   開発用パネルを開く入口と、パネルに足す部品・タブ（`js/scenes/devPanel.js` を使う。7-4）。
 
 ### 7-2. 起動の確認（発注者）
 1.  ふだん使っている静的サーバで、`<ゲームのフォルダ>` をルートにして `index.html` を開く。`file://` で開いても動かない（`oz/ENGINE_API.md` 1章）。
@@ -434,6 +435,162 @@ grep -rn "ozengine sample" index.html js assets
 *   背面と同じ配置のパッド（`js/ui/virtualPadConfig.js` の `VIRTUAL_PAD_LAYOUT`）を、このシーンも登録している。登録しないと、背面のパッドの位置を押した指が窓の外の押下になり、外を押すと閉じる窓が閉じてしまうためである（26章「注意」）。背面の配置が違う画面の上に置くときは、REQ でこのシーンを直すよう指示する。`virtualPad: false` のときも、そのまま使える。
 *   土台の設定画面と、土台が開発用パネルに足した項目は見本なので、6章で消える。開発用パネルの雛形（`js/scenes/devPanel.js`）は残る。ゲームでは自分の窓を作る関数を渡して使う。
 *   UI 部品の既定の大きさは、横長のゲームを縦に持ったスマートフォンでは小さい。26章「既定の大きさ」を見る。
+
+**開発用パネルの雛形（`js/scenes/devPanel.js`）**
+*   開発モード（7-5）のときだけ開く、開発用の窓である。開発モードでないときは、開く指示をしても何も起きない。
+*   はじめからあるタブ「基本」では、次のことができる。
+    *   FPS: 今の値を見る。画面の隅への表示を出す・消す。表示の位置（左上・右上・右下・左下）を変える。
+    *   速度: 今の速度を見る。停止・×0.25・×0.5・×1・×2 から選ぶ。
+*   「基本」の部品の下に、ゲームの部品（ボタン、数値の表示など。`oz/ENGINE_API.md` 26章のもの）を足せる。「基本」の右に、自分のタブを足せる。ゲームの REQ で「開発用パネルの『基本』に、『敵を消す』のボタンを足す」「タブ『音』を足して、音量を表示する」のように指示する → パネルにその部品とタブが出る。`devPanel.js` は書き換えず、パネルを開く側のコードに書く。
+*   6章で見本を消すと、パネルを開く入口（キー、メニューの項目、画面のボタン）は残らない。ゲームの REQ で「プレイの画面で `D` キーか画面のボタンを押すと、開発用パネルが開く。入口は、開発モード（`Engine.debug`）のときだけ働き、表示される」のように、入口と足す項目を指示する → 開発モードで開いたときだけ、入口が使える。
+*   注意:
+    *   窓を開いている間は、後ろの画面が止まる。変えた速度が動きに表れるのは、窓を閉じた後である。
+    *   ヒットストップなどで、速度（`Engine.timeScale`）をゲームが自分で変えるときは、パネルで選んだ速度がゲームの書き込みで上書きされる。
+    *   選んだ状態は保存されない。ページを読み込み直すと、はじめの状態に戻る。
+    *   後ろの画面のパッドの配置が `VIRTUAL_PAD_LAYOUT` と違うときは、上の「窓を置くシーン」と同じく、REQ で `WindowScene.js` を直すよう指示する。
+    *   詳しいことは `js/scenes/devPanel.js` の先頭のコメントに書いてある。REQ を作るときに、Claude Code に読ませる。
+
+**開発用パネルを使うコード例**
+*   7-1 まで終えたプロジェクトに、そのまま置いて動く例である。四角が右へ動き続ける画面を1つ作り、`D` キーと画面のボタンの両方から開発用パネルを開く。「基本」に「四角を左端に戻す」のボタンを、自分のタブ「状態」に四角の位置の表示を足す。
+*   発注者が、REQ で「手順書 7-4 のコード例のとおりに入れる」と指示し、Claude Code が書く。期待する結果: `?debug` を付けて開き、「TAP SCREEN」の画面を押すと、四角が動き、上の中央に「開発用パネル」のボタンが出て、ボタンか `D` キーでパネルが開く。`?debug` を付けないで開き、同じように画面を押すと、四角だけが動き、ボタンは出ず、`D` キーを押しても何も起きない。
+*   シーンの名前（`FirstScene`）、キー（`KeyD`）、ボタンの位置と大きさは例である（画面の大きさは土台の 1280 × 720）。自分のゲームでは、入口と足す部品だけを、ゲームのシーンに同じ形で書く。
+
+1つめ: `js/scenes/FirstScene.js` を新しく作る。
+
+```js
+/**
+ * 責務: 四角が右へ動き続けるだけの最小の画面と、開発用パネルを開く入口（キーと画面のボタン。開発モードのときだけ）。
+ */
+import { Engine, Scene } from 'oz';
+import { LAYER } from '../names.js';
+import { openDevPanel } from './devPanel.js';
+import { drawMenuButton } from './MenuScene.js';
+
+/** この画面と、開発用パネルの窓を描くレイヤー名 */
+const SCENE_LAYER = LAYER.main;
+/** 開発用パネルを開くキー（このファイルだけで使うので names.js に書かない） */
+const DEV_PANEL_KEY = 'KeyD';
+/** 開発用パネルを開く画面のボタンの矩形（論理座標。上の中央） */
+const DEV_PANEL_BUTTON = { x: 500, y: 20, width: 280, height: 88 };
+/** 開発用パネルを開く画面のボタンの表示文字 */
+const DEV_PANEL_BUTTON_TEXT = '開発用パネル';
+
+/** 四角の一辺の長さ（論理座標） */
+const BOX_SIZE = 100;
+/** 四角が1ミリ秒に進む距離（論理座標） */
+const BOX_SPEED = 0.3;
+/** 四角の色 */
+const BOX_COLOR = '#3498db';
+
+/** 「基本」に足すボタンの文字 */
+const LABEL_RESET = '四角を左端に戻す';
+/** 足すタブの名前 */
+const LABEL_TAB = '状態';
+/** 足すタブの表示の項目名 */
+const LABEL_BOX_X = '四角の位置';
+
+/** 四角が右へ動き続ける画面。開発モードのときだけ、キーと画面のボタンから開発用パネルを開ける */
+export class FirstScene extends Scene {
+  /**
+   * @param {{ width: number, height: number }} screen 解像度
+   */
+  constructor(screen) {
+    super();
+    /** @type {{ width: number, height: number }} 解像度 */
+    this.screen = screen;
+    /** @type {number} 四角の左端の x（論理座標） */
+    this.boxX = 0;
+  }
+
+  /**
+   * 開発モードのときだけ、開発用パネルを開く画面のボタンを登録する。
+   * @returns {void}
+   */
+  init() {
+    if (Engine.debug) Engine.addButton(this, { ...DEV_PANEL_BUTTON, onPress: () => this.openPanel() });
+  }
+
+  /**
+   * 四角を右へ進める。右端まで行ったら左端に戻す。
+   * @param {number} dt 1ティックの長さ（ミリ秒）
+   * @returns {void}
+   */
+  update(dt) {
+    this.boxX = (this.boxX + BOX_SPEED * dt) % this.screen.width;
+  }
+
+  /**
+   * 開発モードのときだけ、キーで開発用パネルを開く。
+   * @param {string} code 押されたキーのコード
+   * @returns {void}
+   */
+  onKeyDown(code) {
+    if (Engine.debug && code === DEV_PANEL_KEY) this.openPanel();
+  }
+
+  /**
+   * 四角と、開発モードのときだけ開発用パネルを開くボタンを描く。
+   * @param {CanvasRenderingContext2D} ctx 描画先
+   * @param {string} layer レイヤー名
+   * @returns {void}
+   */
+  draw(ctx, layer) {
+    if (layer !== SCENE_LAYER) return;
+    ctx.save();
+    ctx.fillStyle = BOX_COLOR;
+    ctx.fillRect(this.boxX, (this.screen.height - BOX_SIZE) / 2, BOX_SIZE, BOX_SIZE);
+    ctx.restore();
+    if (Engine.debug) drawMenuButton(ctx, DEV_PANEL_BUTTON, DEV_PANEL_BUTTON_TEXT);
+  }
+
+  /**
+   * 開発用パネルを開く。「基本」にボタンを1つ、自分のタブに数値の表示を1つ足す。
+   * @returns {void}
+   */
+  openPanel() {
+    openDevPanel({
+      layer: SCENE_LAYER,
+      addParts: (area, start) => {
+        area.addButton({ ...start, label: LABEL_RESET, onPress: () => this.resetBox() });
+      },
+      tabs: [
+        {
+          label: LABEL_TAB,
+          build: (tab, rect) => {
+            tab.addValue({
+              x: rect.x,
+              y: rect.y,
+              width: rect.width,
+              label: LABEL_BOX_X,
+              read: () => Math.round(this.boxX),
+            });
+          },
+        },
+      ],
+    });
+  }
+
+  /**
+   * 四角を左端に戻す。
+   * @returns {void}
+   */
+  resetBox() {
+    this.boxX = 0;
+  }
+}
+```
+
+2つめ: `js/main.js` の `import { BootScene } from './scenes/BootScene.js';` の次に、次の1行を足す。
+
+```js
+import { FirstScene } from './scenes/FirstScene.js';
+```
+
+3つめ: `js/main.js` の `config` の `scene:` の行を、次の1行に書き換える（`next` の中だけが変わる）。`js/main.js` のほかの行は変えない。
+
+```js
+  scene: new BootScene({ screen, layer: LAYER.main, next: () => new FirstScene(screen) }),
+```
 
 **使わないゲームでは**
 *   `virtualPad` を `false` にし、メニューも窓も開発用パネルも使わないなら、5つの `.js`（`MenuScene.js`・`WindowScene.js`・`devPanel.js`・`virtualPadConfig.js`・`virtualPadView.js`）と画像はそのまま残してよい。ゲームのコードから読み込まれないので、起動に影響しない。
