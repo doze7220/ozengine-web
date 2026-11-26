@@ -119,6 +119,7 @@ OZ Engine のリポジトリ（GitHub `doze7220/ozengine-web`、ローカル `D:
 │   ├── scenes/
 │   └── ui/
 ├── assets/
+│   ├── icon/
 │   ├── images/
 │   ├── sounds/
 │   └── sprites/
@@ -343,9 +344,11 @@ grep -rn "ozengine sample" index.html js assets
 
 期待する結果（バーチャルパッドの既定の画像）: `assets/images/vpad/` の画像は、目印の付いていない `js/ui/virtualPadConfig.js` に書かれたパスから参照されている。そのため、手順1の結果にこの画像のパスが出て、「参照されているファイル」と判定され、消されない。この手順そのものは変えなくてよい。
 
+期待する結果（WEBアイコン）: `index.html` のアイコンの指定の4行（`./assets/icon/...`）は、素材のファイルへの参照に数える。そのため、手順1の結果にこの4行が出て、`assets/icon/` の4つの PNG は「参照されているファイル」と判定され、消されない。この手順そのものは変えなくてよい。
+
 現時点の土台での例:
 *   消える4ファイル（目印を消した後に参照が残らない）: `assets/images/sample.png`・`assets/sounds/sample_bgm.mp3`・`assets/sounds/sample_se.mp3`・`assets/sprites/ship.js`。
-*   残る4ファイル（`js/ui/virtualPadConfig.js` から参照されている）: `assets/images/vpad/` の `stick_base.svg`・`stick_knob.svg`・`button_boost.svg`・`button_boost_pressed.svg`。
+*   残る8ファイル: `assets/images/vpad/` の `stick_base.svg`・`stick_knob.svg`・`button_boost.svg`・`button_boost_pressed.svg`（`js/ui/virtualPadConfig.js` から参照されている）と、`assets/icon/` の `favicon-32.png`・`apple-touch-icon-180.png`・`icon-192.png`・`icon-512.png`（`index.html` のアイコンの指定から参照されている）。
 
 このファイル名は例である。ファイル名には頼らず、いつも「参照されていないファイル」で判断すること。
 
@@ -363,10 +366,11 @@ grep -rn "ozengine sample" index.html js assets
 
 *   `index.html` の `<title>`: `OZ Engine` を `<ゲーム名>` に変える。
 
-`index.html` のそのほか（import map、CSS、canvas）は変えない。エンジンの使い方は `oz/ENGINE_API.md` 2章に書かれたとおりである。
+`index.html` のそのほか（import map、アイコンの指定、CSS、canvas）は変えない。エンジンの使い方は `oz/ENGINE_API.md` 2章に書かれたとおりである。
 
 次の箇所も、ゲームごとに変わる。立ち上げでは変えず、ゲームの Phase の REQ で変える。
 
+*   アイコンの差し替え: `assets/icon/` の4つの PNG（`favicon-32.png`・`apple-touch-icon-180.png`・`icon-192.png`・`icon-512.png`）を、**同じファイル名・同じ大きさ**の自分の画像で上書きする。`index.html` のアイコンの指定は変えない。差し替えるまでは、OZ の白いロゴ（背景は透明）が出る。
 *   `js/names.js` の名前（レイヤー・画像・音・キー。7-4）。
 *   `js/main.js` の解像度（`width`・`height`）。
 *   `js/main.js` の `layers`（レイヤーの並び。名前は `js/names.js` の `LAYER` に書く。7-4）。
@@ -620,6 +624,10 @@ import { FirstScene } from './scenes/FirstScene.js';
 *   このまま公開すると、アドレスを知っている人は誰でも、末尾に `?debug` を付けて開発モードで開ける。
 *   公開するときに開発モードを使えなくするなら、REQ で「`js/main.js` の `const debug = …` の右辺を `false` に書き換える」と指示する → `const debug = false;` になり、`?debug` を付けて開いても開発モードにならない。また使うときは、右辺を上の形に戻す。
 *   どちらの場合も、開発用のコード（`devPanel.js` や入口のコード）は取り除かれず、公開したファイルの中に残る。開発モードでなければ、入口は出ず、開発用パネルも開かない。
+
+*   アイコンの差し替え忘れは、公開する前に次のように確かめる。
+    *   静的サーバで開いて、ブラウザのタブのアイコンが OZ の白いロゴのままでないかを見る。OZ のロゴは白で背景が透明なので、明るい色のタブではほとんど見えない。見えない・何も無いように見えるときも、差し替えていない疑いがある。
+    *   タブに出るのは主に 32 px のものだけなので、残りの3つ（`apple-touch-icon-180.png`・`icon-192.png`・`icon-512.png`）は、アドレスで直接開いて（例 `http://localhost:8000/assets/icon/icon-512.png`）、自分の画像になっているかを見る。
 
 ## 8. 憲法と開発資料にエンジンについて書く
 
