@@ -12,7 +12,7 @@ AIは新規にファイルを作成、あるいはログを記録する際、必
 
 ```
 ozengine-web/
-├── index.html              # 起動ページ（import map を定義する）
+├── index.html              # 起動ページ（import map とアイコンの指定を定義する）
 ├── oz/                     # エンジン本体（ゲームへ丸ごとコピーされる単位）
 │   ├── index.js
 │   ├── ENGINE_API.md
@@ -27,6 +27,7 @@ ozengine-web/
 │   ├── effect/
 │   └── entities/
 ├── assets/                 # 素材
+│   ├── icon/               # WEBアイコン（ゲームは同じファイル名で上書きして差し替える）
 │   ├── sprites/
 │   ├── images/             # `vpad/` はバーチャルパッドの既定の画像
 │   └── sounds/
